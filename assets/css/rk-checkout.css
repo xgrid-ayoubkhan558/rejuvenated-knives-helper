@@ -48,6 +48,9 @@
 #rk_city_search_field {
   padding: relative;
 }
+#rk_city_search_field {
+  padding: relative;
+}
 #rk_city_search_field .woocommerce-input-wrapper {
   display: -webkit-box;
   display: -ms-flexbox;
@@ -57,4 +60,38 @@
       -ms-flex-direction: column;
           flex-direction: column;
   gap: 8px;
+}
+
+/* Read-only region field styling */
+.rk-region-readonly input[readonly],
+input.rk-region-readonly[readonly],
+#shipping_rk_region[readonly],
+#billing_rk_region[readonly] {
+  background-color: #f5f5f5 !important;
+  cursor: not-allowed !important;
+  opacity: 0.8;
+}
+
+.rk-region-readonly input[readonly]:focus,
+input.rk-region-readonly[readonly]:focus,
+#shipping_rk_region[readonly]:focus,
+#billing_rk_region[readonly]:focus {
+  outline: none;
+  box-shadow: none;
+  border-color: #ddd;
+}
+
+/* City field state classes */
+.rk-city-has-value,
+.rk-city-has-value input,
+.form-row.rk-city-has-value,
+.woocommerce-input-wrapper.rk-city-has-value {
+  /* Styles when city has a value */
+}
+
+.rk-city-empty,
+.rk-city-empty input,
+.form-row.rk-city-empty,
+.woocommerce-input-wrapper.rk-city-empty {
+  /* Styles when city field is empty */
 }

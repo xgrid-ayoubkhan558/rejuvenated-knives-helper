@@ -19,7 +19,7 @@
             }
         } else {
             // fallback: look for the attribute on any search field (prefixed or unprefixed)
-            const searchSource = document.querySelector('[name="shipping_rk_city_search"], [name="billing_rk_city_search"], [name="rk_city_search"], #rk_city_search');
+            const searchSource = document.querySelector('[name="billing_rk_city_search"], [name="rk_city_search"], #rk_city_search');
             if (searchSource && searchSource.dataset && searchSource.dataset.regions) {
                 try {
                     data = JSON.parse(searchSource.dataset.regions);
@@ -88,8 +88,113 @@
             "Hooray! You're within our door-to-door service area.\n" +
             "Simply pick a preferred pick-up date, and we'll take care of the rest—collecting your knives, sharpening them to perfection, and delivering them back to you promptly.";
 
-        // Find any search inputs (shipping, billing, or generic unprefixed)
-        const searchInputs = document.querySelectorAll('[name="shipping_rk_city_search"], [name="billing_rk_city_search"], [name="rk_city_search"], #rk_city_search');
+        // Initialize region fields as read-only on page load (billing only)
+        function initializeRegionFields() {
+            const regionFields = document.querySelectorAll('[name="billing_rk_region"], #billing_rk_region');
+            regionFields.forEach(field => {
+                if (field.tagName && field.tagName.toUpperCase() !== 'SELECT') {
+                    field.setAttribute('readonly', 'readonly');
+                    field.style.backgroundColor = '#f5f5f5';
+                    field.style.cursor = 'not-allowed';
+                }
+            });
+        }
+
+        // Initialize region fields immediately
+        initializeRegionFields();
+
+        // Function to update body classes based on city selection state
+        function updateBodyCityClasses(searchInput, cityInput) {
+            if (!ADD_BODY_CLASSES) {
+                return;
+            }
+
+            try {
+                const searchValue = (searchInput ? (searchInput.value || '').trim() : '');
+                const cityValue = (cityInput ? (cityInput.value || '').trim() : '');
+                const hasCitySelected = cityValue.length > 0; // Only consider it selected if hidden field has value
+
+                if (hasCitySelected) {
+                    // City is selected
+                    document.body.classList.add('rk-city-selected');
+                    document.body.classList.remove('rk-city-not-selected');
+                } else {
+                    // City is not selected
+                    document.body.classList.add('rk-city-not-selected');
+                    document.body.classList.remove('rk-city-selected');
+                }
+            } catch (e) {
+                console.error('[RK] Error updating body classes:', e);
+            }
+        }
+
+        // Initialize body class on page load - check all city fields
+        function initializeBodyCityClass() {
+            if (!ADD_BODY_CLASSES) {
+                return;
+            }
+
+            try {
+                // Check all possible city input fields
+                const allCityInputs = document.querySelectorAll('[name="billing_rk_city"], #billing_rk_city');
+                let hasAnyCitySelected = false;
+
+                allCityInputs.forEach(cityInput => {
+                    const cityValue = (cityInput.value || '').trim();
+                    if (cityValue.length > 0) {
+                        hasAnyCitySelected = true;
+                    }
+                });
+
+                if (hasAnyCitySelected) {
+                    document.body.classList.add('rk-city-selected');
+                    document.body.classList.remove('rk-city-not-selected');
+                } else {
+                    document.body.classList.add('rk-city-not-selected');
+                    document.body.classList.remove('rk-city-selected');
+                }
+            } catch (e) {
+                console.error('[RK] Error initializing body class:', e);
+                // Default to not-selected if there's an error
+                if (ADD_BODY_CLASSES) {
+                    document.body.classList.add('rk-city-not-selected');
+                }
+            }
+        }
+
+        // Initialize body class immediately on page load
+        initializeBodyCityClass();
+
+        // Function to update city field classes based on value
+        function updateCityFieldClasses(searchInput, cityInput) {
+            const searchValue = (searchInput.value || '').trim();
+            const cityValue = (cityInput ? cityInput.value || '' : '').trim();
+            const hasValue = searchValue.length > 0 || cityValue.length > 0;
+            
+            // Get the field wrapper
+            const fieldWrapper = searchInput.closest('.form-row, .woocommerce-input-wrapper, p, .form-row-wide');
+            if (fieldWrapper) {
+                if (hasValue) {
+                    fieldWrapper.classList.add('rk-city-has-value');
+                    fieldWrapper.classList.remove('rk-city-empty');
+                } else {
+                    fieldWrapper.classList.add('rk-city-empty');
+                    fieldWrapper.classList.remove('rk-city-has-value');
+                }
+            }
+            
+            // Also add class to the input itself
+            if (hasValue) {
+                searchInput.classList.add('rk-city-has-value');
+                searchInput.classList.remove('rk-city-empty');
+            } else {
+                searchInput.classList.add('rk-city-empty');
+                searchInput.classList.remove('rk-city-has-value');
+            }
+        }
+
+        // Find any search inputs (billing only now)
+        const searchInputs = document.querySelectorAll('[name="billing_rk_city_search"], [name="rk_city_search"], #rk_city_search');
 
         searchInputs.forEach(searchInput => {
             // base may be 'shipping_' or 'billing_' or empty string for unprefixed
@@ -145,10 +250,23 @@
             let fp = null;
             if (dateInput && typeof flatpickr !== 'undefined') {
                 try {
+                    // Initial flatpickr setup - will be updated when city is selected
+                    const minDaysAdvance = opts.min_days_advance || 0;
+                    const maxDaysAdvance = opts.max_days_advance || 90;
+                    
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const minDate = new Date(today);
+                    minDate.setDate(today.getDate() + minDaysAdvance);
+                    const maxDate = new Date(today);
+                    maxDate.setDate(today.getDate() + maxDaysAdvance);
+                    
                     fp = flatpickr(dateInput, {
                         dateFormat: DATE_FORMAT,
                         clickOpens: true,
-                        disable: [date => date < new Date().setHours(0, 0, 0, 0)]
+                        minDate: minDate, // Disable past dates and respect min days advance
+                        maxDate: maxDaysAdvance > 0 ? maxDate : null, // Set max date if specified
+                        disable: [] // Will be updated when city is selected
                     });
                 } catch (err) {
                     console.error('[RK] flatpickr init error', err);
@@ -183,6 +301,191 @@
                 if (searchInput) {
                     searchInput.setAttribute('aria-expanded', 'false');
                 }
+                // Clear region and city fields when search is cleared
+                if (regionInput) {
+                    regionInput.value = '';
+                    ['input', 'change', 'blur'].forEach(eventType => {
+                        try {
+                            regionInput.dispatchEvent(new Event(eventType, { bubbles: true, cancelable: true }));
+                        } catch (e) {
+                            if (document.createEvent) {
+                                const evt = document.createEvent('HTMLEvents');
+                                evt.initEvent(eventType, true, true);
+                                regionInput.dispatchEvent(evt);
+                            }
+                        }
+                    });
+                }
+                if (cityInput) {
+                    cityInput.value = '';
+                    cityInput.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+                }
+                // Update classes and required state when cleared
+                updateCityFieldClasses(searchInput, cityInput);
+                updateCityFieldRequired(searchInput, cityInput);
+            }
+
+            // Also listen for changes on the hidden city field
+            if (cityInput) {
+                cityInput.addEventListener('change', function() {
+                    updateCityFieldClasses(searchInput, cityInput);
+                    updateCityFieldRequired(searchInput, cityInput);
+                    updateBodyCityClasses(searchInput, cityInput);
+                });
+            }
+
+            // Before form submission, ensure validation passes if field has value
+            const checkoutForm = document.querySelector('form.checkout');
+            if (checkoutForm) {
+                // Remove required attribute before form validation - use multiple event types
+                const removeRequiredBeforeSubmit = function(e) {
+                    const searchValue = (searchInput.value || '').trim();
+                    const cityValue = (cityInput ? cityInput.value || '' : '').trim();
+                    const hasValue = searchValue.length > 0 || cityValue.length > 0;
+                    
+                    if (hasValue) {
+                        // Remove required attribute to prevent validation error
+                        searchInput.removeAttribute('required');
+                        searchInput.setAttribute('data-has-value', 'true');
+                        
+                        // Also remove from any cloned fields (WooCommerce might clone fields)
+                        const allSearchInputs = document.querySelectorAll('[name="billing_rk_city_search"]');
+                        allSearchInputs.forEach(input => {
+                            const inputValue = (input.value || '').trim();
+                            if (inputValue.length > 0) {
+                                input.removeAttribute('required');
+                                input.setAttribute('data-has-value', 'true');
+                            }
+                        });
+                        
+                        // Also remove validation errors immediately
+                        const fieldRow = searchInput.closest('.form-row, .woocommerce-input-wrapper, p');
+                        if (fieldRow) {
+                            fieldRow.classList.remove('woocommerce-invalid', 'woocommerce-invalid-required-field');
+                            const errorLabel = fieldRow.querySelector('.woocommerce-error');
+                            if (errorLabel) {
+                                errorLabel.remove();
+                            }
+                        }
+                    }
+                };
+                
+                // Attach to multiple events to catch it early
+                checkoutForm.addEventListener('submit', removeRequiredBeforeSubmit, true); // Capture phase
+                checkoutForm.addEventListener('click', function(e) {
+                    // If clicking place order button, remove required immediately
+                    if (e.target && (e.target.type === 'submit' || e.target.closest('button[type="submit"]'))) {
+                        removeRequiredBeforeSubmit(e);
+                    }
+                }, true);
+                
+                // Also handle on input blur to remove required immediately when field has value
+                searchInput.addEventListener('blur', function() {
+                    const searchValue = (searchInput.value || '').trim();
+                    const cityValue = (cityInput ? cityInput.value || '' : '').trim();
+                    const hasValue = searchValue.length > 0 || cityValue.length > 0;
+                    
+                    if (hasValue) {
+                        searchInput.removeAttribute('required');
+                        // Remove any existing validation errors
+                        const fieldRow = searchInput.closest('.form-row, .woocommerce-input-wrapper, p');
+                        if (fieldRow) {
+                            fieldRow.classList.remove('woocommerce-invalid', 'woocommerce-invalid-required-field');
+                            const errorLabel = fieldRow.querySelector('.woocommerce-error');
+                            if (errorLabel) {
+                                errorLabel.remove();
+                            }
+                        }
+                    }
+                });
+
+                // Also handle checkout_place_order event (WooCommerce AJAX)
+                if (typeof jQuery !== 'undefined') {
+                    jQuery(checkoutForm).on('checkout_place_order', function() {
+                        const searchValue = (searchInput.value || '').trim();
+                        const cityValue = (cityInput ? cityInput.value || '' : '').trim();
+                        const hasValue = searchValue.length > 0 || cityValue.length > 0;
+                        
+                        if (hasValue) {
+                            // Remove any validation errors
+                            const fieldRow = searchInput.closest('.form-row, .woocommerce-input-wrapper, p');
+                            if (fieldRow) {
+                                fieldRow.classList.remove('woocommerce-invalid', 'woocommerce-invalid-required-field');
+                                const errorLabel = fieldRow.querySelector('.woocommerce-error');
+                                if (errorLabel) {
+                                    errorLabel.remove();
+                                }
+                            }
+                            // Ensure required attribute is removed
+                            searchInput.removeAttribute('required');
+                            
+                            // Remove from all search inputs
+                            const allSearchInputs = document.querySelectorAll('[name="billing_rk_city_search"]');
+                            allSearchInputs.forEach(input => {
+                                const inputValue = (input.value || '').trim();
+                                if (inputValue.length > 0) {
+                                    input.removeAttribute('required');
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+
+            // Function to update required attribute based on value
+            function updateCityFieldRequired(searchInput, cityInput) {
+                const searchValue = (searchInput.value || '').trim();
+                const cityValue = (cityInput ? cityInput.value || '' : '').trim();
+                const hasValue = searchValue.length > 0 || cityValue.length > 0;
+                
+                // Remove required attribute if field has a value (to prevent validation error)
+                // WooCommerce will still validate it, but we'll handle the error removal
+                if (hasValue) {
+                    searchInput.removeAttribute('required');
+                    searchInput.setAttribute('data-has-value', 'true');
+                } else {
+                    // Only add required if it was originally required
+                    if (searchInput.hasAttribute('data-originally-required')) {
+                        searchInput.setAttribute('required', 'required');
+                    }
+                    searchInput.removeAttribute('data-has-value');
+                }
+            }
+
+            // Store original required state
+            if (searchInput.hasAttribute('required') || searchInput.required) {
+                searchInput.setAttribute('data-originally-required', 'true');
+            }
+
+            // Initialize classes and required state on page load
+            updateCityFieldClasses(searchInput, cityInput);
+            updateCityFieldRequired(searchInput, cityInput);
+            updateBodyCityClasses(searchInput, cityInput);
+            
+            // Disable submit button initially if city is not selected
+            function updateSubmitButton() {
+                const searchValue = (searchInput.value || '').trim();
+                const cityValue = (cityInput ? cityInput.value || '' : '').trim();
+                const hasCitySelected = cityValue.length > 0; // Only consider selected if hidden field has value
+                
+                const submitButton = document.querySelector('button[name="woocommerce_checkout_place_order"], #place_order');
+                if (submitButton) {
+                    if (hasCitySelected) {
+                        submitButton.disabled = false;
+                        submitButton.removeAttribute('disabled');
+                    } else {
+                        submitButton.disabled = true;
+                        submitButton.setAttribute('disabled', 'disabled');
+                    }
+                }
+            }
+            
+            // Check on page load
+            updateSubmitButton();
+            
+            // Update when city field changes
+            if (cityInput) {
+                cityInput.addEventListener('change', updateSubmitButton);
             }
 
             searchInput.addEventListener('input', function () {
@@ -195,6 +498,10 @@
                 }
                 if (dateWrapper) dateWrapper.style.display = 'none';
 
+                // Update classes and required state based on current value
+                updateCityFieldClasses(searchInput, cityInput);
+                updateCityFieldRequired(searchInput, cityInput);
+
                 console.log('[RK] input:', { q: q, citiesCount: cities.length });
 
                 if (!q) {
@@ -202,8 +509,24 @@
                     try {
                         if ( ADD_BODY_CLASSES ) {
                             document.body.classList.remove('rk-city-found', 'rk-city-not-found', 'rk-city-selected');
+                            document.body.classList.add('rk-city-not-selected');
                         }
                     } catch (e) {}
+                    // Clear city input when search is cleared
+                    if (cityInput) {
+                        cityInput.value = '';
+                        cityInput.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+                    }
+                    updateCityFieldClasses(searchInput, cityInput);
+                    updateCityFieldRequired(searchInput, cityInput);
+                    updateBodyCityClasses(searchInput, cityInput);
+                    
+                    // Disable submit button when city is cleared
+                    const submitButton = document.querySelector('button[name="woocommerce_checkout_place_order"], #place_order');
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                        submitButton.setAttribute('disabled', 'disabled');
+                    }
                     return;
                 }
 
@@ -218,12 +541,26 @@
                         console.log('[RK] no matches for', q);
                         if (cityInput) {
                             cityInput.value = '';
-                            cityInput.dispatchEvent(new Event('change'));
+                            cityInput.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
                         }
                         if (regionInput) {
                             regionInput.value = '';
-                            regionInput.dispatchEvent(new Event('change'));
+                            // Trigger multiple events to ensure validation updates
+                            ['input', 'change', 'blur'].forEach(eventType => {
+                                try {
+                                    regionInput.dispatchEvent(new Event(eventType, { bubbles: true, cancelable: true }));
+                                } catch (e) {
+                                    if (document.createEvent) {
+                                        const evt = document.createEvent('HTMLEvents');
+                                        evt.initEvent(eventType, true, true);
+                                        regionInput.dispatchEvent(evt);
+                                    }
+                                }
+                            });
                         }
+                        // Update classes and required state when no matches
+                        updateCityFieldClasses(searchInput, cityInput);
+                        updateCityFieldRequired(searchInput, cityInput);
                         if (fp && typeof fp.clear === 'function') {
                             try { fp.clear(); } catch (err) { console.error('[RK] flatpickr.clear error', err); }
                         }
@@ -238,7 +575,7 @@
                         // Body classes and select fallback payment
                         try {
                             if ( ADD_BODY_CLASSES ) {
-                                document.body.classList.add('rk-city-not-found');
+                                document.body.classList.add('rk-city-not-found', 'rk-city-not-selected');
                                 document.body.classList.remove('rk-city-found', 'rk-city-selected');
                             }
                         } catch (e) {}
@@ -262,13 +599,17 @@
                     dropdown.classList.add('visible');
                     dropdown.style.display = 'block';
                     searchInput.setAttribute('aria-expanded', 'true');
-                    // Mark body that matches exist (not necessarily selected yet)
-                    try {
-                        if ( ADD_BODY_CLASSES ) {
-                            document.body.classList.add('rk-city-found');
-                            document.body.classList.remove('rk-city-not-found', 'rk-city-selected');
-                        }
-                    } catch (e) {}
+                        // Mark body that matches exist (not necessarily selected yet)
+                        try {
+                            if ( ADD_BODY_CLASSES ) {
+                                document.body.classList.add('rk-city-found');
+                                document.body.classList.remove('rk-city-not-found', 'rk-city-selected');
+                                // Keep rk-city-not-selected since no city is actually selected yet
+                                if (!document.body.classList.contains('rk-city-not-selected')) {
+                                    document.body.classList.add('rk-city-not-selected');
+                                }
+                            }
+                        } catch (e) {}
 
                     matches.forEach(c => {
                         const div = document.createElement('div');
@@ -285,16 +626,78 @@
                             searchInput.value = c.city_name;
                             try { searchInput.blur(); } catch (e) { }
 
+                            // Trigger validation events on search input to clear any errors
+                            ['input', 'change', 'blur'].forEach(eventType => {
+                                try {
+                                    searchInput.dispatchEvent(new Event(eventType, { bubbles: true, cancelable: true }));
+                                } catch (e) {
+                                    if (document.createEvent) {
+                                        const evt = document.createEvent('HTMLEvents');
+                                        evt.initEvent(eventType, true, true);
+                                        searchInput.dispatchEvent(evt);
+                                    }
+                                }
+                            });
+
+                            // Remove validation errors from search field
+                            const searchFieldRow = searchInput.closest('.form-row, .woocommerce-input-wrapper, p');
+                            if (searchFieldRow) {
+                                searchFieldRow.classList.remove('woocommerce-invalid', 'woocommerce-invalid-required-field');
+                                const errorLabel = searchFieldRow.querySelector('.woocommerce-error');
+                                if (errorLabel) {
+                                    errorLabel.remove();
+                                }
+                            }
+
                             // populate hidden city field and trigger change so checkout updates
                             if (cityInput) {
                                 cityInput.value = c.city_name;
-                                cityInput.dispatchEvent(new Event('change'));
+                                cityInput.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+                                
+                                // Remove validation errors from city field
+                                const cityFieldRow = cityInput.closest('.form-row, .woocommerce-input-wrapper, p');
+                                if (cityFieldRow) {
+                                    cityFieldRow.classList.remove('woocommerce-invalid', 'woocommerce-invalid-required-field');
+                                    const errorLabel = cityFieldRow.querySelector('.woocommerce-error');
+                                    if (errorLabel) {
+                                        errorLabel.remove();
+                                    }
+                                }
+                                
+                                // Also remove errors from search field
+                                const searchFieldRow = searchInput.closest('.form-row, .woocommerce-input-wrapper, p');
+                                if (searchFieldRow) {
+                                    searchFieldRow.classList.remove('woocommerce-invalid', 'woocommerce-invalid-required-field');
+                                    const searchErrorLabel = searchFieldRow.querySelector('.woocommerce-error');
+                                    if (searchErrorLabel) {
+                                        searchErrorLabel.remove();
+                                    }
+                                }
+                                
+                                // Enable submit button now that city is selected
+                                const submitButton = document.querySelector('button[name="woocommerce_checkout_place_order"], #place_order');
+                                if (submitButton) {
+                                    submitButton.disabled = false;
+                                    submitButton.removeAttribute('disabled');
+                                }
                             }
 
+                            // Update classes and required state after city selection
+                            updateCityFieldClasses(searchInput, cityInput);
+                            updateCityFieldRequired(searchInput, cityInput);
+
                             // populate region field — supports <select> or text input
+                            // Region field is read-only and auto-populated
                             if (regionInput) {
                                 const tag = (regionInput.tagName || '').toUpperCase();
                                 const regionName = c.region.region_name;
+
+                                // Make sure region field is read-only
+                                if (tag !== 'SELECT') {
+                                    regionInput.setAttribute('readonly', 'readonly');
+                                    regionInput.style.backgroundColor = '#f5f5f5';
+                                    regionInput.style.cursor = 'not-allowed';
+                                }
 
                                 if (tag === 'SELECT') {
                                     let matched = Array.from(regionInput.options).find(opt => opt.value === regionName || opt.text === regionName);
@@ -310,10 +713,45 @@
                                             regionInput.value = regionName;
                                         }
                                     }
-                                    regionInput.dispatchEvent(new Event('change'));
                                 } else {
                                     regionInput.value = regionName;
-                                    regionInput.dispatchEvent(new Event('change'));
+                                }
+
+                                // Trigger multiple events to ensure WooCommerce validation recognizes the change
+                                ['input', 'change', 'blur'].forEach(eventType => {
+                                    try {
+                                        regionInput.dispatchEvent(new Event(eventType, { bubbles: true, cancelable: true }));
+                                    } catch (e) {
+                                        // Fallback for older browsers
+                                        if (document.createEvent) {
+                                            const evt = document.createEvent('HTMLEvents');
+                                            evt.initEvent(eventType, true, true);
+                                            regionInput.dispatchEvent(evt);
+                                        }
+                                    }
+                                });
+
+                                // Remove any validation errors from the region field
+                                const regionFieldRow = regionInput.closest('.form-row, .woocommerce-input-wrapper, p');
+                                if (regionFieldRow) {
+                                    regionFieldRow.classList.remove('woocommerce-invalid', 'woocommerce-invalid-required-field');
+                                    const errorLabel = regionFieldRow.querySelector('.woocommerce-error');
+                                    if (errorLabel) {
+                                        errorLabel.remove();
+                                    }
+                                }
+                            }
+
+                            // Trigger WooCommerce checkout validation update
+                            if (typeof jQuery !== 'undefined' && typeof jQuery.fn.trigger !== 'undefined') {
+                                try {
+                                    jQuery('body').trigger('update_checkout');
+                                } catch (e) {
+                                    // Fallback: trigger change on checkout form
+                                    const checkoutForm = document.querySelector('form.checkout');
+                                    if (checkoutForm) {
+                                        checkoutForm.dispatchEvent(new Event('change', { bubbles: true }));
+                                    }
                                 }
                             }
 
@@ -328,9 +766,12 @@
                             try {
                                 if ( ADD_BODY_CLASSES ) {
                                     document.body.classList.add('rk-city-selected', 'rk-city-found');
-                                    document.body.classList.remove('rk-city-not-found');
+                                    document.body.classList.remove('rk-city-not-found', 'rk-city-not-selected');
                                 }
                             } catch (e) {}
+                            
+                            // Update body classes
+                            updateBodyCityClasses(searchInput, cityInput);
 
                             if ( ENABLE_AUTO_PAYMENT && PAYMENT_FOUND ) {
                                 const foundMethod = document.querySelector('input[name="payment_method"][value="' + PAYMENT_FOUND + '"], input#payment_method_' + PAYMENT_FOUND);
@@ -353,10 +794,22 @@
                             // ensure fp is initialized (in case it was not when script loaded)
                             if (!fp && dateInput && typeof flatpickr !== 'undefined') {
                                 try {
+                                    const minDaysAdvance = opts.min_days_advance || 0;
+                                    const maxDaysAdvance = opts.max_days_advance || 90;
+                                    
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    const minDate = new Date(today);
+                                    minDate.setDate(today.getDate() + minDaysAdvance);
+                                    const maxDate = new Date(today);
+                                    maxDate.setDate(today.getDate() + maxDaysAdvance);
+                                    
                                     fp = flatpickr(dateInput, {
                                         dateFormat: DATE_FORMAT,
                                         clickOpens: true,
-                                        disable: [date => date < new Date().setHours(0, 0, 0, 0)]
+                                        minDate: minDate,
+                                        maxDate: maxDaysAdvance > 0 ? maxDate : null,
+                                        disable: [] // Will be set below
                                     });
                                 } catch (err) {
                                     console.error('[RK] flatpickr init error (on-demand)', err);
@@ -365,13 +818,40 @@
                             }
 
                             if (fp && typeof fp.set === 'function') {
-                                // set disable function
+                                // Update disable function to only enable pickup days from today onwards
                                 try {
+                                    // Get min/max days advance from options
+                                    const minDaysAdvance = opts.min_days_advance || 0;
+                                    const maxDaysAdvance = opts.max_days_advance || 90;
+                                    
+                                    // Calculate min and max dates
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    const minDate = new Date(today);
+                                    minDate.setDate(today.getDate() + minDaysAdvance);
+                                    const maxDate = new Date(today);
+                                    maxDate.setDate(today.getDate() + maxDaysAdvance);
+                                    
+                                    fp.set('minDate', minDate); // Set minimum date based on min_days_advance
+                                    if (maxDaysAdvance > 0) {
+                                        fp.set('maxDate', maxDate); // Set maximum date
+                                    }
+                                    
+                                    // The disable function should only check for pickup days
+                                    // minDate and maxDate are already handled by flatpickr's minDate/maxDate
                                     fp.set('disable', [date => {
-                                        const today = new Date().setHours(0, 0, 0, 0);
-                                        if (date < today) return true;
-                                        if (!enabledDays.length) return false; // no restriction
-                                        return !enabledDays.includes(date.getDay());
+                                        const dateToCheck = new Date(date);
+                                        dateToCheck.setHours(0, 0, 0, 0);
+                                        
+                                        // If no enabled days specified, allow all dates (minDate/maxDate will handle range)
+                                        if (!enabledDays.length) {
+                                            return false; // Don't disable - let minDate/maxDate handle it
+                                        }
+                                        
+                                        // Only disable days that are NOT in the enabledDays array
+                                        // getDay() returns 0 for Sunday, 1 for Monday, etc.
+                                        const dayOfWeek = dateToCheck.getDay();
+                                        return !enabledDays.includes(dayOfWeek);
                                     }]);
                                 } catch (err) {
                                     console.error('[RK] flatpickr.set error', err);
@@ -429,4 +909,102 @@
     } else {
         init();
     }
+
+    // Re-initialize region fields when WooCommerce updates checkout (AJAX)
+    if (typeof jQuery !== 'undefined') {
+        jQuery(document.body).on('updated_checkout', function() {
+            const regionFields = document.querySelectorAll('[name="billing_rk_region"], #billing_rk_region');
+            regionFields.forEach(field => {
+                if (field.tagName && field.tagName.toUpperCase() !== 'SELECT') {
+                    field.setAttribute('readonly', 'readonly');
+                    field.style.backgroundColor = '#f5f5f5';
+                    field.style.cursor = 'not-allowed';
+                }
+            });
+
+            // Re-check and remove required attribute from city search fields if they have values
+            const allSearchInputs = document.querySelectorAll('[name="shipping_rk_city_search"], [name="billing_rk_city_search"]');
+            allSearchInputs.forEach(searchInput => {
+                const base = (searchInput.name || '').replace(/rk_city_search$/, '');
+                const cityInput = document.querySelector('[name="' + base + 'rk_city"]');
+                const searchValue = (searchInput.value || '').trim();
+                const cityValue = (cityInput ? cityInput.value || '' : '').trim();
+                const hasValue = searchValue.length > 0 || cityValue.length > 0;
+                
+                if (hasValue) {
+                    searchInput.removeAttribute('required');
+                    // Remove validation errors
+                    const fieldRow = searchInput.closest('.form-row, .woocommerce-input-wrapper, p');
+                    if (fieldRow) {
+                        fieldRow.classList.remove('woocommerce-invalid', 'woocommerce-invalid-required-field');
+                        const errorLabel = fieldRow.querySelector('.woocommerce-error');
+                        if (errorLabel) {
+                            errorLabel.remove();
+                        }
+                    }
+                }
+            });
+        });
+
+        // Intercept checkout validation errors and remove city search field errors if field has value
+        jQuery(document.body).on('checkout_error', function() {
+            const allSearchInputs = document.querySelectorAll('[name="shipping_rk_city_search"], [name="billing_rk_city_search"]');
+            allSearchInputs.forEach(searchInput => {
+                const base = (searchInput.name || '').replace(/rk_city_search$/, '');
+                const cityInput = document.querySelector('[name="' + base + 'rk_city"]');
+                const searchValue = (searchInput.value || '').trim();
+                const cityValue = (cityInput ? cityInput.value || '' : '').trim();
+                const hasValue = searchValue.length > 0 || cityValue.length > 0;
+                
+                if (hasValue) {
+                    // Remove validation errors from this field
+                    const fieldRow = searchInput.closest('.form-row, .woocommerce-input-wrapper, p');
+                    if (fieldRow) {
+                        fieldRow.classList.remove('woocommerce-invalid', 'woocommerce-invalid-required-field');
+                        const errorLabel = fieldRow.querySelector('.woocommerce-error');
+                        if (errorLabel) {
+                            // Check if error message is about this field being required
+                            const errorText = errorLabel.textContent || '';
+                            if (errorText.toLowerCase().includes('city') && errorText.toLowerCase().includes('required')) {
+                                errorLabel.remove();
+                            }
+                        }
+                    }
+                    
+                    // Remove error from notices list
+                    const errorNotices = document.querySelectorAll('.woocommerce-error li');
+                    errorNotices.forEach(notice => {
+                        const noticeText = notice.textContent || '';
+                        if (noticeText.toLowerCase().includes('city') && noticeText.toLowerCase().includes('required') && 
+                            (noticeText.includes('search') || noticeText.includes('rk_city_search'))) {
+                            notice.remove();
+                        }
+                    });
+                }
+            });
+        });
+    }
+
+    // Global form submission handler to remove required attribute before validation
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkoutForm = document.querySelector('form.checkout');
+        if (checkoutForm) {
+            // Use capture phase to run before WooCommerce validation
+            checkoutForm.addEventListener('submit', function(e) {
+                const allSearchInputs = document.querySelectorAll('[name="billing_rk_city_search"]');
+                allSearchInputs.forEach(searchInput => {
+                    const base = (searchInput.name || '').replace(/rk_city_search$/, '');
+                    const cityInput = document.querySelector('[name="' + base + 'rk_city"]');
+                    const searchValue = (searchInput.value || '').trim();
+                    const cityValue = (cityInput ? cityInput.value || '' : '').trim();
+                    const hasValue = searchValue.length > 0 || cityValue.length > 0;
+                    
+                    if (hasValue) {
+                        searchInput.removeAttribute('required');
+                        searchInput.setAttribute('data-has-value', 'true');
+                    }
+                });
+            }, true);
+        }
+    });
 })();

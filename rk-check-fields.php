@@ -24,11 +24,20 @@ class RK_Checkout_Fields {
             return;
         }
 
-        // Add fields into checkout shipping fields (placed after shipping phone when possible)
+        // Add fields into checkout billing fields
         add_filter( 'woocommerce_checkout_fields', array( $this, 'checkout_fields' ) );
+        
+        // Disable "Ship to a different address" checkbox (if enabled in settings)
+        add_action( 'wp', array( $this, 'maybe_disable_shipping_address' ) );
 
         // Validate
         add_action( 'woocommerce_checkout_process', array( $this, 'checkout_validate' ) );
+        
+        // Dynamically modify field requirements based on POST data (runs during checkout)
+        add_filter( 'woocommerce_checkout_fields', array( $this, 'modify_city_search_requirements' ), 9999 );
+        
+        // Remove validation notices for city search field if it has a value (runs early)
+        add_action( 'woocommerce_checkout_process', array( $this, 'remove_city_search_notices' ), 5 );
 
         // Save
         add_action( 'woocommerce_checkout_update_order_meta', array( $this, 'save_order_meta' ) );
@@ -212,6 +221,10 @@ class RK_Checkout_Fields {
 
         add_settings_field( 'add_body_classes', __( 'Add body classes', 'rk-check-fields' ), array( $this, 'field_add_body_classes' ), 'rk-checkout-fields', 'rk_cf_display' );
         add_settings_field( 'date_format', __( 'Date picker format', 'rk-check-fields' ), array( $this, 'field_date_format' ), 'rk-checkout-fields', 'rk_cf_display' );
+        add_settings_field( 'disable_shipping_address', __( 'Disable shipping address', 'rk-check-fields' ), array( $this, 'field_disable_shipping_address' ), 'rk-checkout-fields', 'rk_cf_display' );
+        add_settings_field( 'require_city_selection', __( 'Require city selection from dropdown', 'rk-check-fields' ), array( $this, 'field_require_city_selection' ), 'rk-checkout-fields', 'rk_cf_display' );
+        add_settings_field( 'min_days_advance', __( 'Minimum days in advance for pickup', 'rk-check-fields' ), array( $this, 'field_min_days_advance' ), 'rk-checkout-fields', 'rk_cf_display' );
+        add_settings_field( 'max_days_advance', __( 'Maximum days in advance for pickup', 'rk-check-fields' ), array( $this, 'field_max_days_advance' ), 'rk-checkout-fields', 'rk_cf_display' );
 
         // Messages Section
         add_settings_section( 'rk_cf_messages', __( 'Messages', 'rk-check-fields' ), array( $this, 'section_messages_callback' ), 'rk-checkout-fields' );
@@ -260,6 +273,10 @@ class RK_Checkout_Fields {
         $out['city_search_label'] = sanitize_text_field( $input['city_search_label'] ?: $defaults['city_search_label'] );
         $out['pickup_date_label'] = sanitize_text_field( $input['pickup_date_label'] ?: $defaults['pickup_date_label'] );
         $out['city_search_placeholder'] = sanitize_text_field( $input['city_search_placeholder'] ?: $defaults['city_search_placeholder'] );
+        $out['disable_shipping_address'] = ! empty( $input['disable_shipping_address'] ) ? 1 : 0;
+        $out['require_city_selection'] = ! empty( $input['require_city_selection'] ) ? 1 : 0;
+        $out['min_days_advance'] = absint( $input['min_days_advance'] ?? $defaults['min_days_advance'] );
+        $out['max_days_advance'] = absint( $input['max_days_advance'] ?? $defaults['max_days_advance'] );
         return $out;
     }
 
@@ -277,6 +294,10 @@ class RK_Checkout_Fields {
             'city_search_label' => __( 'City (search)', 'rk-check-fields' ),
             'pickup_date_label' => __( 'Pickup date', 'rk-check-fields' ),
             'city_search_placeholder' => __( 'Search your city', 'rk-check-fields' ),
+            'disable_shipping_address' => 1,
+            'require_city_selection' => 0,
+            'min_days_advance' => 0,
+            'max_days_advance' => 90,
         );
         $opts = get_option( 'rk_cf_options', array() );
         return wp_parse_args( $opts, $defaults );
@@ -412,6 +433,30 @@ class RK_Checkout_Fields {
         echo '<p class="description">' . esc_html__( 'Placeholder text for the city search input field.', 'rk-check-fields' ) . '</p>';
     }
 
+    public function field_disable_shipping_address() {
+        $opts = $this->get_plugin_options();
+        echo '<label><input type="checkbox" name="rk_cf_options[disable_shipping_address]" value="1" ' . checked( 1, $opts['disable_shipping_address'], false ) . ' /> ' . esc_html__( 'Hide "Ship to a different address" checkbox', 'rk-check-fields' ) . '</label>';
+        echo '<p class="description">' . esc_html__( 'When enabled, the shipping address section will be hidden and customers can only use billing address.', 'rk-check-fields' ) . '</p>';
+    }
+
+    public function field_require_city_selection() {
+        $opts = $this->get_plugin_options();
+        echo '<label><input type="checkbox" name="rk_cf_options[require_city_selection]" value="1" ' . checked( 1, $opts['require_city_selection'], false ) . ' /> ' . esc_html__( 'Require city selection from dropdown only', 'rk-check-fields' ) . '</label>';
+        echo '<p class="description">' . esc_html__( 'When enabled, customers must select a city from the dropdown list. Manual text input will not be accepted.', 'rk-check-fields' ) . '</p>';
+    }
+
+    public function field_min_days_advance() {
+        $opts = $this->get_plugin_options();
+        echo '<input type="number" name="rk_cf_options[min_days_advance]" value="' . esc_attr( $opts['min_days_advance'] ) . '" class="small-text" min="0" step="1" />';
+        echo '<p class="description">' . esc_html__( 'Minimum number of days in advance customers must select a pickup date. Set to 0 to allow same-day pickup.', 'rk-check-fields' ) . '</p>';
+    }
+
+    public function field_max_days_advance() {
+        $opts = $this->get_plugin_options();
+        echo '<input type="number" name="rk_cf_options[max_days_advance]" value="' . esc_attr( $opts['max_days_advance'] ) . '" class="small-text" min="1" step="1" />';
+        echo '<p class="description">' . esc_html__( 'Maximum number of days in advance customers can select a pickup date.', 'rk-check-fields' ) . '</p>';
+    }
+
     public function settings_page() {
         if ( ! current_user_can( 'manage_woocommerce' ) ) {
             return;
@@ -498,44 +543,7 @@ class RK_Checkout_Fields {
         // Get dynamic labels from settings
         $opts = $this->get_plugin_options();
 
-        // Shipping fields (primary placement)
-        $fields['shipping']['rk_region'] = array(
-            'type'     => 'text',
-            'class'    => array( 'form-row-wide' ),
-            'label'    => $opts['region_label'],
-            'required' => false,
-            'priority' => $priority,
-        );
-
-        // Visible search input (user types to find city) — will populate rk_region/rk_city and show date picker
-        $fields['shipping']['rk_city_search'] = array(
-            'type'     => 'text',
-            'class'    => array( 'form-row-wide' ),
-            'label'    => $opts['city_search_label'],
-            'required' => true,
-            'placeholder' => $opts['city_search_placeholder'],
-            'custom_attributes' => array( 'data-regions' => $locations_json ),
-            'priority' => $priority + 1,
-        );
-
-        // Hidden to store selected city name (used by JS) — only one visible search input is shown
-        $fields['shipping']['rk_city'] = array(
-            'type'     => 'hidden',
-            'class'    => array( 'form-row-wide' ),
-            'required' => false,
-            'priority' => $priority + 2,
-        );
-
-        // Pickup date (populated by flatpickr when a city is selected)
-        $fields['shipping']['rk_pickup_date'] = array(
-            'type'     => 'text',
-            'class'    => array( 'form-row-wide' ),
-            'label'    => $opts['pickup_date_label'],
-            'required' => false,
-            'priority' => $priority + 3,
-        );
-
-        // Billing fallback (so fields are visible if shipping is not used/displayed)
+        // Only add fields to billing (removed shipping fields as requested)
         $billing_priority = 100;
         if ( isset( $fields['billing']['billing_phone']['priority'] ) ) {
             $billing_priority = $fields['billing']['billing_phone']['priority'] + 1;
@@ -545,20 +553,23 @@ class RK_Checkout_Fields {
             $billing_priority = $fields['billing']['city']['priority'] + 1;
         }
 
+        // Billing region field is optional and read-only (auto-populated when city is selected)
         $fields['billing']['rk_region'] = array(
             'type'     => 'text',
-            'class'    => array( 'form-row-wide' ),
+            'class'    => array( 'form-row-wide', 'rk-region-readonly' ),
             'label'    => $opts['region_label'],
-            'required' => true,
+            'required' => false,
+            'readonly' => true,
+            'custom_attributes' => array( 'readonly' => 'readonly' ),
             'priority' => $billing_priority,
         );
 
-        // Visible search input for billing
+        // Visible search input for billing - not required by default (validation handled dynamically)
         $fields['billing']['rk_city_search'] = array(
             'type'     => 'text',
             'class'    => array( 'form-row-wide' ),
             'label'    => $opts['city_search_label'],
-            'required' => true,
+            'required' => false, // Not required by default - will be validated in checkout_validate
             'placeholder' => $opts['city_search_placeholder'],
             'custom_attributes' => array( 'data-regions' => $locations_json ),
             'priority' => $billing_priority + 1,
@@ -584,40 +595,182 @@ class RK_Checkout_Fields {
     }
 
     /**
-     * Validate the fields on checkout (accepts shipping or billing inputs)
+     * Maybe disable shipping address based on settings
+     */
+    public function maybe_disable_shipping_address() {
+        if ( ! is_checkout() ) {
+            return;
+        }
+        
+        $opts = $this->get_plugin_options();
+        if ( ! empty( $opts['disable_shipping_address'] ) ) {
+            add_filter( 'woocommerce_ship_to_different_address_checked', '__return_false' );
+            add_filter( 'woocommerce_cart_needs_shipping_address', '__return_false' );
+            // Hide the checkbox with CSS
+            add_action( 'wp_head', function() {
+                echo '<style>#ship-to-different-address-checkbox, #ship-to-different-address { display: none !important; }</style>';
+            } );
+        }
+    }
+
+    /**
+     * Validate the fields on checkout (billing only)
      */
     public function checkout_validate() {
         $region = '';
         $city   = '';
+        $city_search = '';
 
-        if ( ! empty( $_POST['shipping_rk_region'] ) ) {
-            $region = wp_unslash( $_POST['shipping_rk_region'] );
-        } elseif ( ! empty( $_POST['billing_rk_region'] ) ) {
+        // Get region value (billing only)
+        if ( ! empty( $_POST['billing_rk_region'] ) ) {
             $region = wp_unslash( $_POST['billing_rk_region'] );
         }
 
-        if ( ! empty( $_POST['shipping_rk_city'] ) ) {
-            $city = wp_unslash( $_POST['shipping_rk_city'] );
-        } elseif ( ! empty( $_POST['billing_rk_city'] ) ) {
+        // Get city value (hidden field - from dropdown selection, billing only)
+        if ( ! empty( $_POST['billing_rk_city'] ) ) {
             $city = wp_unslash( $_POST['billing_rk_city'] );
         }
 
-        if ( empty( $region ) ) {
-            wc_add_notice( __( 'Please enter a region.', 'rk-check-fields' ), 'error' );
+        // Get city search value (visible field - user input, billing only)
+        if ( ! empty( $_POST['billing_rk_city_search'] ) ) {
+            $city_search = trim( wp_unslash( $_POST['billing_rk_city_search'] ) );
         }
 
-        if ( empty( $city ) ) {
-            wc_add_notice( __( 'Please enter a city.', 'rk-check-fields' ), 'error' );
+        // City is valid if either the hidden city field OR the search field has a value
+        $city_valid = ! empty( $city ) || ! empty( $city_search );
+
+        // Only require region if a city is selected (region should be auto-populated)
+        if ( ! empty( $city ) && empty( $region ) ) {
+            wc_add_notice( __( 'Please select a city to automatically populate the region.', 'rk-check-fields' ), 'error' );
         }
 
-        // Require pickup date only when a selected city exists (shipping preferred, billing fallback)
-        if ( ! empty( $_POST['shipping_rk_city'] ) ) {
-            if ( empty( $_POST['shipping_rk_pickup_date'] ) ) {
+        // If user typed in city search but didn't select a city from dropdown, that's okay - accept the search value
+        // The city_search field is required, so if it has a value, validation passes
+        // We only show error if BOTH are empty
+        if ( empty( $city ) && empty( $city_search ) ) {
+            // This will be handled by WooCommerce's built-in required field validation
+            // But we can add a custom message if needed
+        }
+
+        // Require pickup date only when a selected city exists (billing only)
+        if ( ! empty( $city ) ) {
+            $pickup_date = '';
+            if ( ! empty( $_POST['billing_rk_pickup_date'] ) ) {
+                $pickup_date = wp_unslash( $_POST['billing_rk_pickup_date'] );
+            }
+            if ( empty( $pickup_date ) ) {
                 wc_add_notice( __( 'Please select a pickup date for your city.', 'rk-check-fields' ), 'error' );
             }
-        } elseif ( ! empty( $_POST['billing_rk_city'] ) ) {
-            if ( empty( $_POST['billing_rk_pickup_date'] ) ) {
-                wc_add_notice( __( 'Please select a pickup date for your city.', 'rk-check-fields' ), 'error' );
+        }
+        
+        // Validate that city field has a value
+        // We check the hidden city field (from dropdown) OR the search field
+        $opts = $this->get_plugin_options();
+        
+        // If require_city_selection is enabled, only accept dropdown selection (hidden city field)
+        if ( ! empty( $opts['require_city_selection'] ) ) {
+            if ( empty( $city ) ) {
+                wc_add_notice( __( 'Please select a city from the dropdown list.', 'rk-check-fields' ), 'error' );
+            }
+        } else {
+            // Accept either dropdown selection or manual input
+            if ( empty( $city ) && empty( $city_search ) ) {
+                wc_add_notice( sprintf( __( '%s is a required field.', 'rk-check-fields' ), $opts['city_search_label'] ), 'error' );
+            }
+        }
+    }
+
+    /**
+     * Dynamically modify city search field requirements based on POST data
+     * This runs during checkout processing to remove required attribute if field has value
+     */
+    public function modify_city_search_requirements( $fields ) {
+        // Only modify during checkout processing (when POST data exists for checkout)
+        $is_checkout = false;
+        if ( isset( $_POST['woocommerce-process-checkout-nonce'] ) ) {
+            $is_checkout = true;
+        } elseif ( defined( 'DOING_AJAX' ) && DOING_AJAX && isset( $_POST['action'] ) && $_POST['action'] === 'woocommerce_checkout' ) {
+            $is_checkout = true;
+        } elseif ( isset( $_POST['wc_checkout_place_order'] ) ) {
+            $is_checkout = true;
+        }
+
+        if ( ! $is_checkout ) {
+            return $fields;
+        }
+
+        // Check hidden city field first (billing only) - this is the primary field from dropdown
+        $city_has_value = false;
+        if ( isset( $_POST['billing_rk_city'] ) && '' !== trim( $_POST['billing_rk_city'] ) ) {
+            $city_has_value = true;
+        }
+        
+        // Also check city search field
+        $city_search_has_value = false;
+        if ( isset( $_POST['billing_rk_city_search'] ) && '' !== trim( $_POST['billing_rk_city_search'] ) ) {
+            $city_search_has_value = true;
+        }
+
+        // If hidden city field has a value (dropdown selection), make the search field not required
+        // This prevents WooCommerce from showing "required field" error
+        if ( $city_has_value ) {
+            if ( isset( $fields['billing']['rk_city_search'] ) ) {
+                $fields['billing']['rk_city_search']['required'] = false;
+            }
+        }
+
+        return $fields;
+    }
+
+    /**
+     * Remove validation notices for city search field if it has a value
+     * This runs early in checkout_process to prevent the error from being added
+     */
+    public function remove_city_search_notices() {
+        // Check hidden city field first (billing only) - this is the primary field from dropdown
+        $city_has_value = false;
+        if ( isset( $_POST['billing_rk_city'] ) && '' !== trim( $_POST['billing_rk_city'] ) ) {
+            $city_has_value = true;
+        }
+        
+        // Also check city search field
+        $city_search_has_value = false;
+        if ( isset( $_POST['billing_rk_city_search'] ) && '' !== trim( $_POST['billing_rk_city_search'] ) ) {
+            $city_search_has_value = true;
+        }
+
+        // If hidden city field has a value (dropdown selection), remove any existing notices
+        // This is the most important check - if city is selected from dropdown, no error should show
+        if ( $city_has_value ) {
+            // Get all notices and remove ones about city search field
+            $notices = wc_get_notices( 'error' );
+            if ( ! empty( $notices ) ) {
+                foreach ( $notices as $key => $notice ) {
+                    if ( is_string( $notice ) ) {
+                        $notice_text = $notice;
+                    } elseif ( is_array( $notice ) && isset( $notice['notice'] ) ) {
+                        $notice_text = $notice['notice'];
+                    } else {
+                        continue;
+                    }
+                    
+                    // Check if this notice is about city search field being required
+                    if ( ( stripos( $notice_text, 'city' ) !== false && stripos( $notice_text, 'search' ) !== false && stripos( $notice_text, 'required' ) !== false ) ||
+                         ( stripos( $notice_text, 'rk_city_search' ) !== false && stripos( $notice_text, 'required' ) !== false ) ) {
+                        // Remove this notice
+                        unset( $notices[ $key ] );
+                    }
+                }
+                
+                // Clear all error notices and re-add the ones we want to keep
+                wc_clear_notices( 'error' );
+                foreach ( $notices as $notice ) {
+                    if ( is_string( $notice ) ) {
+                        wc_add_notice( $notice, 'error' );
+                    } elseif ( is_array( $notice ) && isset( $notice['notice'] ) ) {
+                        wc_add_notice( $notice['notice'], 'error', $notice );
+                    }
+                }
             }
         }
     }
@@ -649,11 +802,9 @@ class RK_Checkout_Fields {
             update_post_meta( $order_id, 'rk_city', $city );
         }
 
-        // Pickup date (shipping preferred, billing fallback)
+        // Pickup date (billing only)
         $pickup = '';
-        if ( isset( $_POST['shipping_rk_pickup_date'] ) && '' !== trim( wp_unslash( $_POST['shipping_rk_pickup_date'] ) ) ) {
-            $pickup = sanitize_text_field( wp_unslash( $_POST['shipping_rk_pickup_date'] ) );
-        } elseif ( isset( $_POST['billing_rk_pickup_date'] ) ) {
+        if ( isset( $_POST['billing_rk_pickup_date'] ) && '' !== trim( wp_unslash( $_POST['billing_rk_pickup_date'] ) ) ) {
             $pickup = sanitize_text_field( wp_unslash( $_POST['billing_rk_pickup_date'] ) );
         }
 
