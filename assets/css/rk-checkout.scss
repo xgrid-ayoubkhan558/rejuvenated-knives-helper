@@ -31,17 +31,24 @@
 
 .rk-message {
     display: block;
-    white-space: pre-line;
-    color: #333;
-    padding: 6px 8px;
-    background: transparent;
-    border: 0;
-    margin-top: 6px;
+
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1.4;
+    margin: 10px 0;
+    border: 1px solid #b7e4c7;
+    background-color: #e6f7ed;
+    color: #1e7e34;
+
+    &:empty {
+        display: none;
+    }
+
 }
 
 .rk-city-info {
-    margin-top: 6px;
-    display: none;
+    display: none !important;
 }
 
 .rk-date-wrapper {

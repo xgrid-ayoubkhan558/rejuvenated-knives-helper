@@ -1,8 +1,8 @@
-(function(){
+(function () {
     'use strict';
 
     function init() {
-        if ( typeof rk_check_fields_data === 'undefined' ) {
+        if (typeof rk_check_fields_data === 'undefined') {
             return;
         }
 
@@ -10,24 +10,24 @@
 
         // Prefer reading locations JSON from the hidden checkout container
         const dataHolder = document.getElementById('rk-check-fields-data');
-        if ( dataHolder && dataHolder.dataset && dataHolder.dataset.regions ) {
+        if (dataHolder && dataHolder.dataset && dataHolder.dataset.regions) {
             try {
-                data = JSON.parse( dataHolder.dataset.regions );
-            } catch ( e ) {
+                data = JSON.parse(dataHolder.dataset.regions);
+            } catch (e) {
                 // fallback to localized var
-                data = ( typeof rk_check_fields_data !== 'undefined' ) ? rk_check_fields_data : [];
+                data = (typeof rk_check_fields_data !== 'undefined') ? rk_check_fields_data : [];
             }
         } else {
             // fallback: look for the attribute on any search field (prefixed or unprefixed)
             const searchSource = document.querySelector('[name="shipping_rk_city_search"], [name="billing_rk_city_search"], [name="rk_city_search"], #rk_city_search');
-            if ( searchSource && searchSource.dataset && searchSource.dataset.regions ) {
+            if (searchSource && searchSource.dataset && searchSource.dataset.regions) {
                 try {
-                    data = JSON.parse( searchSource.dataset.regions );
-                } catch ( e ) {
-                    data = ( typeof rk_check_fields_data !== 'undefined' ) ? rk_check_fields_data : [];
+                    data = JSON.parse(searchSource.dataset.regions);
+                } catch (e) {
+                    data = (typeof rk_check_fields_data !== 'undefined') ? rk_check_fields_data : [];
                 }
             } else {
-                data = ( typeof rk_check_fields_data !== 'undefined' ) ? rk_check_fields_data : [];
+                data = (typeof rk_check_fields_data !== 'undefined') ? rk_check_fields_data : [];
             }
         }
 
@@ -37,7 +37,7 @@
             cities = [];
             data.forEach(region => {
                 (region.cities || []).forEach(city => {
-                    cities.push( Object.assign({}, city, { region: region }) );
+                    cities.push(Object.assign({}, city, { region: region }));
                 });
             });
         }
@@ -45,27 +45,31 @@
 
         // If we have no data, try to fetch it from AJAX endpoint (useful if data-regions isn't proper JSON)
         function fetchLocations() {
-            if ( typeof rk_check_fields_ajax === 'undefined' ) {
+            if (typeof rk_check_fields_ajax === 'undefined') {
                 return Promise.resolve();
             }
 
-            return fetch( rk_check_fields_ajax.ajax_url + '?action=rk_get_locations' )
-                .then( response => response.json() )
-                .then( json => {
-                    if ( json && json.success && Array.isArray( json.data ) ) {
+            return fetch(rk_check_fields_ajax.ajax_url + '?action=rk_get_locations')
+                .then(response => response.json())
+                .then(json => {
+                    if (json && json.success && Array.isArray(json.data)) {
                         data = json.data;
                         rebuildCities();
                     }
-                } )
-                .catch( () => {} );
+                })
+                .catch(() => { });
         }
 
         // If no initially available regions, attempt a fetch so search works
-        if ( ! data || ! data.length ) {
+        if (!data || !data.length) {
             fetchLocations();
         }
 
-        const mailInMessage = "Good news!\n\nWhile your location is outside our door-to-door coverage area, you can mail in your items using our mail-in service.";
+        const mailInMessage =
+            "Good news!\n\n" +
+            "While your location is outside our door-to-door coverage area, " +
+            "you can mail in your knives using our premium mail-in service.\n\n" +
+            "We’ll send you a complete mailing kit and sharpen them to perfection.";
 
         // Find any search inputs (shipping, billing, or generic unprefixed)
         const searchInputs = document.querySelectorAll('[name="shipping_rk_city_search"], [name="billing_rk_city_search"], [name="rk_city_search"], #rk_city_search');
@@ -82,7 +86,7 @@
             let wrapper = searchInput.parentNode.querySelector('.rk-city-wrapper');
             let dropdown, message, cityInfo, dateWrapper;
 
-            if ( wrapper ) {
+            if (wrapper) {
                 dropdown = wrapper.querySelector('.rk-city-dropdown') || document.createElement('div');
                 message = wrapper.querySelector('.rk-message') || document.createElement('div');
                 cityInfo = wrapper.querySelector('.rk-city-info') || document.createElement('div');
@@ -122,14 +126,14 @@
 
             // attach flatpickr instance when needed
             let fp = null;
-            if ( dateInput && typeof flatpickr !== 'undefined' ) {
+            if (dateInput && typeof flatpickr !== 'undefined') {
                 try {
-                    fp = flatpickr( dateInput, {
+                    fp = flatpickr(dateInput, {
                         dateFormat: 'd-m-Y',
                         clickOpens: true,
-                        disable: [ date => date < new Date().setHours(0,0,0,0) ]
+                        disable: [date => date < new Date().setHours(0, 0, 0, 0)]
                     });
-                } catch ( err ) {
+                } catch (err) {
                     console.error('[RK] flatpickr init error', err);
                     fp = null;
                 }
@@ -137,9 +141,9 @@
 
             // Find the visible row/container for the date input so we can show/hide it
             let dateFieldRow = null;
-            if ( dateInput ) {
+            if (dateInput) {
                 dateFieldRow = dateInput.closest('.form-row') || dateInput.closest('p') || dateInput.parentNode;
-                if ( dateFieldRow ) {
+                if (dateFieldRow) {
                     // hide initially
                     dateFieldRow.style.display = 'none';
                 }
@@ -152,31 +156,31 @@
                 dropdown.style.display = 'none';
                 message.textContent = '';
                 cityInfo.innerHTML = '';
-                if ( fp ) {
+                if (fp) {
                     fp.clear();
                 }
-                if ( dateFieldRow ) dateFieldRow.style.display = 'none';
-                if ( dateInput ) {
+                if (dateFieldRow) dateFieldRow.style.display = 'none';
+                if (dateInput) {
                     dateInput.required = false;
                 }
-                if ( searchInput ) {
+                if (searchInput) {
                     searchInput.setAttribute('aria-expanded', 'false');
                 }
             }
 
-            searchInput.addEventListener('input', function() {
+            searchInput.addEventListener('input', function () {
                 const q = searchInput.value.toLowerCase().trim();
                 dropdown.innerHTML = '';
                 dropdown.style.display = 'none';
                 cityInfo.innerHTML = '';
-                if ( fp && typeof fp.clear === 'function' ) {
-                    try { fp.clear(); } catch ( err ) { console.error('[RK] flatpickr.clear error', err); }
+                if (fp && typeof fp.clear === 'function') {
+                    try { fp.clear(); } catch (err) { console.error('[RK] flatpickr.clear error', err); }
                 }
-                if ( dateWrapper ) dateWrapper.style.display = 'none';
+                if (dateWrapper) dateWrapper.style.display = 'none';
 
                 console.log('[RK] input:', { q: q, citiesCount: cities.length });
 
-                if ( ! q ) {
+                if (!q) {
                     message.textContent = '';
                     return;
                 }
@@ -185,33 +189,35 @@
                 const doSearch = () => {
                     const matches = cities.filter(c => (`${c.city_name} ${c.region.region_name}`).toLowerCase().includes(q));
 
-                    if ( ! matches.length ) {
+                    if (!matches.length) {
                         dropdown.classList.remove('visible');
                         dropdown.style.display = 'none';
                         message.textContent = mailInMessage;
                         console.log('[RK] no matches for', q);
-                        if ( cityInput ) {
+                        if (cityInput) {
                             cityInput.value = '';
                             cityInput.dispatchEvent(new Event('change'));
                         }
-                        if ( regionInput ) {
+                        if (regionInput) {
                             regionInput.value = '';
                             regionInput.dispatchEvent(new Event('change'));
                         }
-                        if ( fp && typeof fp.clear === 'function' ) {
-                            try { fp.clear(); } catch ( err ) { console.error('[RK] flatpickr.clear error', err); }
+                        if (fp && typeof fp.clear === 'function') {
+                            try { fp.clear(); } catch (err) { console.error('[RK] flatpickr.clear error', err); }
                         }
-                        if ( dateFieldRow ) {
+                        if (dateFieldRow) {
                             dateFieldRow.style.display = 'none';
                         }
-                        if ( dateInput ) {
+                        if (dateInput) {
                             dateInput.required = false;
                         }
                         searchInput.setAttribute('aria-expanded', 'false');
                         return;
                     }
 
-                    message.textContent = "Hooray! You're within our door-to-door service area.";
+                    message.textContent =
+                        "Hooray! You're within our door-to-door service area.\n" +
+                        "Simply pick a preferred pick-up date, and we'll take care of the rest—collecting your knives, sharpening them to perfection, and delivering them back to you promptly.";
 
                     console.log('[RK] matches', matches);
                     dropdown.classList.add('visible');
@@ -231,22 +237,22 @@
 
                             // set visible search value and blur input
                             searchInput.value = c.city_name;
-                            try { searchInput.blur(); } catch ( e ) {}
+                            try { searchInput.blur(); } catch (e) { }
 
                             // populate hidden city field and trigger change so checkout updates
-                            if ( cityInput ) {
+                            if (cityInput) {
                                 cityInput.value = c.city_name;
                                 cityInput.dispatchEvent(new Event('change'));
                             }
 
                             // populate region field — supports <select> or text input
-                            if ( regionInput ) {
+                            if (regionInput) {
                                 const tag = (regionInput.tagName || '').toUpperCase();
                                 const regionName = c.region.region_name;
 
-                                if ( tag === 'SELECT' ) {
+                                if (tag === 'SELECT') {
                                     let matched = Array.from(regionInput.options).find(opt => opt.value === regionName || opt.text === regionName);
-                                    if ( matched ) {
+                                    if (matched) {
                                         regionInput.value = matched.value;
                                     } else {
                                         // If no matching option, try to add one and select it so the UI reflects the choice
@@ -254,7 +260,7 @@
                                             const opt = new Option(regionName, regionName, true, true);
                                             regionInput.add(opt);
                                             regionInput.value = regionName;
-                                        } catch ( e ) {
+                                        } catch (e) {
                                             regionInput.value = regionName;
                                         }
                                     }
@@ -267,60 +273,63 @@
 
                             // show info and delivery days
                             const deliveryDays = (c.region.region_delivery_days && c.region.region_delivery_days.length) ? c.region.region_delivery_days.join(', ') : '';
-                            message.textContent = "Hooray! You're within our door-to-door service area.";
+                            message.textContent =
+                                "Hooray! You're within our door-to-door service area.\n" +
+                                "Simply pick a preferred pick-up date, and we'll take care of the rest—collecting your knives, sharpening them to perfection, and delivering them back to you promptly.";
+
                             cityInfo.innerHTML = `<strong>${c.city_name}</strong><br>Region: ${c.region.region_name}<br>Delivery Days: ${deliveryDays}`;
                             cityInfo.style.display = 'block';
 
                             // Prepare allowed days for date picker based on pickup schedule
                             const enabledDays = [];
-                            if ( c.region.pickup ) {
-                                Object.entries( c.region.pickup ).forEach(([day,val], i) => {
-                                    if ( val && val.enabled ) enabledDays.push(i);
+                            if (c.region.pickup) {
+                                Object.entries(c.region.pickup).forEach(([day, val], i) => {
+                                    if (val && val.enabled) enabledDays.push(i);
                                 });
                             }
 
                             // ensure fp is initialized (in case it was not when script loaded)
-                            if ( ! fp && dateInput && typeof flatpickr !== 'undefined' ) {
+                            if (!fp && dateInput && typeof flatpickr !== 'undefined') {
                                 try {
-                                    fp = flatpickr( dateInput, {
+                                    fp = flatpickr(dateInput, {
                                         dateFormat: 'd-m-Y',
                                         clickOpens: true,
-                                        disable: [ date => date < new Date().setHours(0,0,0,0) ]
-                                    } );
-                                } catch ( err ) {
+                                        disable: [date => date < new Date().setHours(0, 0, 0, 0)]
+                                    });
+                                } catch (err) {
                                     console.error('[RK] flatpickr init error (on-demand)', err);
                                     fp = null;
                                 }
                             }
 
-                            if ( fp && typeof fp.set === 'function' ) {
+                            if (fp && typeof fp.set === 'function') {
                                 // set disable function
                                 try {
-                                    fp.set('disable', [ date => {
-                                        const today = new Date().setHours(0,0,0,0);
-                                        if ( date < today ) return true;
-                                        if ( ! enabledDays.length ) return false; // no restriction
-                                        return ! enabledDays.includes( date.getDay() );
+                                    fp.set('disable', [date => {
+                                        const today = new Date().setHours(0, 0, 0, 0);
+                                        if (date < today) return true;
+                                        if (!enabledDays.length) return false; // no restriction
+                                        return !enabledDays.includes(date.getDay());
                                     }]);
-                                } catch ( err ) {
+                                } catch (err) {
                                     console.error('[RK] flatpickr.set error', err);
                                 }
 
-                                if ( typeof fp.clear === 'function' ) {
-                                    try { fp.clear(); } catch ( err ) { console.error('[RK] flatpickr.clear error', err); }
+                                if (typeof fp.clear === 'function') {
+                                    try { fp.clear(); } catch (err) { console.error('[RK] flatpickr.clear error', err); }
                                 }
 
-                                if ( dateFieldRow ) {
+                                if (dateFieldRow) {
                                     dateFieldRow.style.display = '';
                                 }
 
                                 // make date required now that a city was selected
-                                if ( dateInput ) {
+                                if (dateInput) {
                                     dateInput.required = true;
                                 }
                             } else {
                                 // If flatpickr not available, still reveal the date field row
-                                if ( dateFieldRow ) {
+                                if (dateFieldRow) {
                                     dateFieldRow.style.display = '';
                                 }
                             }
@@ -329,8 +338,8 @@
                         dropdown.appendChild(div);
 
                         // Accessibility: close dropdown when clicking outside
-                        document.addEventListener('click', function docClick(e){
-                            if ( ! wrapper.contains(e.target) ) {
+                        document.addEventListener('click', function docClick(e) {
+                            if (!wrapper.contains(e.target)) {
                                 dropdown.classList.remove('visible');
                                 dropdown.style.display = 'none';
                                 searchInput.setAttribute('aria-expanded', 'false');
@@ -341,7 +350,7 @@
                     });
                 };
 
-                if ( ! cities.length ) {
+                if (!cities.length) {
                     fetchLocations().then(doSearch);
                 } else {
                     doSearch();
@@ -353,7 +362,7 @@
         });
     }
 
-    if ( document.readyState === 'loading' ) {
+    if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();

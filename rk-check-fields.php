@@ -220,7 +220,7 @@ class RK_Checkout_Fields {
             'type'     => 'text',
             'class'    => array( 'form-row-wide' ),
             'label'    => __( 'Region', 'rk-check-fields' ),
-            'required' => true,
+            'required' => false,
             'priority' => $priority,
         );
 
