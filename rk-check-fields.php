@@ -39,8 +39,132 @@ class RK_Checkout_Fields {
         // Add to emails
         add_filter( 'woocommerce_email_order_meta_fields', array( $this, 'email_order_meta_fields' ), 10, 3 );
 
+        // Enqueue frontend assets on checkout
+        add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+
+        // Print a hidden container with locations JSON so frontend can read it from the DOM
+        add_action( 'woocommerce_before_checkout_form', array( $this, 'print_locations_div' ) );
+
         // Load translations
         load_plugin_textdomain( 'rk-check-fields', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+
+    }
+
+    /**
+     * Echo a hidden div with the locations JSON for the frontend to read
+     */
+    public function print_locations_div() {
+        if ( ! is_checkout() ) {
+            return;
+        }
+
+        $locations = $this->get_locations_data();
+        if ( empty( $locations ) ) {
+            return;
+        }
+
+        $locations_json = htmlspecialchars( wp_json_encode( $locations ), ENT_QUOTES, 'UTF-8' );
+
+        echo '<div id="rk-check-fields-data" style="display:none" data-regions="' . $locations_json . '"></div>';
+    }
+
+    /**
+     * Enqueue scripts/styles on checkout page
+     */
+    public function enqueue_assets() {
+        if ( ! is_checkout() ) {
+            return;
+        }
+
+        // flatpickr (CDN)
+        wp_enqueue_style( 'rk-flatpickr', 'https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css', array(), null );
+        wp_enqueue_script( 'rk-flatpickr', 'https://cdn.jsdelivr.net/npm/flatpickr', array(), null, true );
+
+        // Our checkout CSS & script
+        wp_enqueue_style( 'rk-checkout-css', plugin_dir_url( __FILE__ ) . 'assets/css/rk-checkout.css', array(), filemtime( plugin_dir_path( __FILE__ ) . 'assets/css/rk-checkout.css' ) );
+        wp_enqueue_script( 'rk-checkout', plugin_dir_url( __FILE__ ) . 'assets/js/rk-checkout.js', array( 'rk-flatpickr', 'jquery' ), filemtime( plugin_dir_path( __FILE__ ) . 'assets/js/rk-checkout.js' ), true );
+
+        // Localize data for frontend
+        $data = $this->get_locations_data();
+        wp_localize_script( 'rk-checkout', 'rk_check_fields_data', $data );
+    }
+
+    /**
+     * Build regions + cities data from 'locations' taxonomy
+     * Returns a structured array suitable for JSON.
+     *
+     * @return array
+     */
+    public function get_locations_data() {
+        $regions = get_terms( array(
+            'taxonomy'   => 'locations',
+            'hide_empty' => false,
+            'parent'     => 0,
+        ) );
+
+        $data = array();
+
+        if ( is_wp_error( $regions ) || empty( $regions ) ) {
+            return $data;
+        }
+
+        foreach ( $regions as $region ) {
+            $regionData = array(
+                'region_name' => $region->name,
+                'region_id'   => $region->term_id,
+                'region_delivery_days' => array(),
+                'pickup'      => array(),
+                'cities'      => array(),
+            );
+
+            // Try to read ACF fields if available, fallback to term meta
+            if ( function_exists( 'get_field' ) ) {
+                $regionData['region_id'] = get_field( 'region_id', $region ) ?: $region->term_id;
+                $regionData['region_delivery_days'] = get_field( 'region_delivery_days', $region ) ?: array();
+
+                $days = array( 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday' );
+                foreach ( $days as $day ) {
+                    $regionData['pickup'][ $day ] = array(
+                        'enabled' => (bool) get_field( "region_pickup_{$day}_enabled", $region ),
+                        'start'   => get_field( "region_pickup_{$day}_start_time", $region ),
+                        'end'     => get_field( "region_pickup_{$day}_end_time", $region ),
+                    );
+                }
+            } else {
+                // fallback: read term meta fields
+                $regionData['region_id'] = get_term_meta( $region->term_id, 'region_id', true ) ?: $region->term_id;
+                $regionData['region_delivery_days'] = get_term_meta( $region->term_id, 'region_delivery_days', true ) ?: array();
+
+                $days = array( 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday' );
+                foreach ( $days as $day ) {
+                    $regionData['pickup'][ $day ] = array(
+                        'enabled' => (bool) get_term_meta( $region->term_id, "region_pickup_{$day}_enabled", true ),
+                        'start'   => get_term_meta( $region->term_id, "region_pickup_{$day}_start_time", true ),
+                        'end'     => get_term_meta( $region->term_id, "region_pickup_{$day}_end_time", true ),
+                    );
+                }
+            }
+
+            // Cities
+            $cities = get_terms( array(
+                'taxonomy'   => 'locations',
+                'hide_empty' => false,
+                'parent'     => $region->term_id,
+            ) );
+
+            if ( ! is_wp_error( $cities ) && ! empty( $cities ) ) {
+                foreach ( $cities as $city ) {
+                    $regionData['cities'][] = array(
+                        'city_name' => $city->name,
+                        'city_id'   => $city->term_id,
+                    );
+                }
+            }
+
+            $data[] = $regionData;
+        }
+
+        return $data;
     }
 
     /**
@@ -73,6 +197,10 @@ class RK_Checkout_Fields {
             $priority = $fields['shipping']['city']['priority'] + 1;
         }
 
+        // Prepare locations JSON for the frontend and attach as a data attribute on the search field
+        $locations = $this->get_locations_data();
+        $locations_json = htmlspecialchars( wp_json_encode( $locations ), ENT_QUOTES, 'UTF-8' );
+
         // Shipping fields (primary placement)
         $fields['shipping']['rk_region'] = array(
             'type'     => 'text',
@@ -82,12 +210,32 @@ class RK_Checkout_Fields {
             'priority' => $priority,
         );
 
-        $fields['shipping']['rk_city'] = array(
+        // Visible search input (user types to find city) — will populate rk_region/rk_city and show date picker
+        $fields['shipping']['rk_city_search'] = array(
             'type'     => 'text',
             'class'    => array( 'form-row-wide' ),
-            'label'    => __( 'City', 'rk-check-fields' ),
+            'label'    => __( 'City (search)', 'rk-check-fields' ),
             'required' => true,
+            'placeholder' => __( 'Search your city', 'rk-check-fields' ),
+            'custom_attributes' => array( 'data-regions' => $locations_json ),
             'priority' => $priority + 1,
+        );
+
+        // Hidden to store selected city name (used by JS) — only one visible search input is shown
+        $fields['shipping']['rk_city'] = array(
+            'type'     => 'hidden',
+            'class'    => array( 'form-row-wide' ),
+            'required' => false,
+            'priority' => $priority + 2,
+        );
+
+        // Pickup date (populated by flatpickr when a city is selected)
+        $fields['shipping']['rk_pickup_date'] = array(
+            'type'     => 'text',
+            'class'    => array( 'form-row-wide' ),
+            'label'    => __( 'Pickup date', 'rk-check-fields' ),
+            'required' => false,
+            'priority' => $priority + 3,
         );
 
         // Billing fallback (so fields are visible if shipping is not used/displayed)
@@ -108,12 +256,31 @@ class RK_Checkout_Fields {
             'priority' => $billing_priority,
         );
 
-        $fields['billing']['rk_city'] = array(
+        // Visible search input for billing
+        $fields['billing']['rk_city_search'] = array(
             'type'     => 'text',
             'class'    => array( 'form-row-wide' ),
-            'label'    => __( 'City', 'rk-check-fields' ),
+            'label'    => __( 'City (search)', 'rk-check-fields' ),
             'required' => true,
+            'placeholder' => __( 'Search your city', 'rk-check-fields' ),
+            'custom_attributes' => array( 'data-regions' => $locations_json ),
             'priority' => $billing_priority + 1,
+        );
+
+        // Hidden billing city to store selected city name (used by JS)
+        $fields['billing']['rk_city'] = array(
+            'type'     => 'hidden',
+            'class'    => array( 'form-row-wide' ),
+            'required' => false,
+            'priority' => $billing_priority + 2,
+        );
+
+        $fields['billing']['rk_pickup_date'] = array(
+            'type'     => 'text',
+            'class'    => array( 'form-row-wide' ),
+            'label'    => __( 'Pickup date', 'rk-check-fields' ),
+            'required' => false,
+            'priority' => $billing_priority + 3,
         );
 
         return $fields;
@@ -145,6 +312,17 @@ class RK_Checkout_Fields {
         if ( empty( $city ) ) {
             wc_add_notice( __( 'Please enter a city.', 'rk-check-fields' ), 'error' );
         }
+
+        // Require pickup date only when a selected city exists (shipping preferred, billing fallback)
+        if ( ! empty( $_POST['shipping_rk_city'] ) ) {
+            if ( empty( $_POST['shipping_rk_pickup_date'] ) ) {
+                wc_add_notice( __( 'Please select a pickup date for your city.', 'rk-check-fields' ), 'error' );
+            }
+        } elseif ( ! empty( $_POST['billing_rk_city'] ) ) {
+            if ( empty( $_POST['billing_rk_pickup_date'] ) ) {
+                wc_add_notice( __( 'Please select a pickup date for your city.', 'rk-check-fields' ), 'error' );
+            }
+        }
     }
 
     /**
@@ -173,6 +351,18 @@ class RK_Checkout_Fields {
         if ( $city !== '' ) {
             update_post_meta( $order_id, 'rk_city', $city );
         }
+
+        // Pickup date (shipping preferred, billing fallback)
+        $pickup = '';
+        if ( isset( $_POST['shipping_rk_pickup_date'] ) && '' !== trim( wp_unslash( $_POST['shipping_rk_pickup_date'] ) ) ) {
+            $pickup = sanitize_text_field( wp_unslash( $_POST['shipping_rk_pickup_date'] ) );
+        } elseif ( isset( $_POST['billing_rk_pickup_date'] ) ) {
+            $pickup = sanitize_text_field( wp_unslash( $_POST['billing_rk_pickup_date'] ) );
+        }
+
+        if ( $pickup !== '' ) {
+            update_post_meta( $order_id, 'rk_pickup_date', $pickup );
+        }
     }
 
     /**
@@ -181,10 +371,20 @@ class RK_Checkout_Fields {
     public function display_admin_order_meta( $order ) {
         $region = get_post_meta( $order->get_id(), 'rk_region', true );
         $city   = get_post_meta( $order->get_id(), 'rk_city', true );
+        $pickup = get_post_meta( $order->get_id(), 'rk_pickup_date', true );
 
-        if ( $region || $city ) {
-            echo '<p><strong>' . esc_html__( 'Region', 'rk-check-fields' ) . ':</strong> ' . esc_html( $region ) . '</p>';
-            echo '<p><strong>' . esc_html__( 'City', 'rk-check-fields' ) . ':</strong> ' . esc_html( $city ) . '</p>';
+        if ( $region || $city || $pickup ) {
+            if ( $region ) {
+                echo '<p><strong>' . esc_html__( 'Region', 'rk-check-fields' ) . ':</strong> ' . esc_html( $region ) . '</p>';
+            }
+
+            if ( $city ) {
+                echo '<p><strong>' . esc_html__( 'City', 'rk-check-fields' ) . ':</strong> ' . esc_html( $city ) . '</p>';
+            }
+
+            if ( $pickup ) {
+                echo '<p><strong>' . esc_html__( 'Pickup date', 'rk-check-fields' ) . ':</strong> ' . esc_html( $pickup ) . '</p>';
+            }
         }
     }
 
@@ -194,6 +394,7 @@ class RK_Checkout_Fields {
     public function email_order_meta_fields( $fields, $sent_to_admin, $order ) {
         $region = get_post_meta( $order->get_id(), 'rk_region', true );
         $city   = get_post_meta( $order->get_id(), 'rk_city', true );
+        $pickup = get_post_meta( $order->get_id(), 'rk_pickup_date', true );
 
         if ( $region ) {
             $fields['rk_region'] = array(
@@ -206,6 +407,13 @@ class RK_Checkout_Fields {
             $fields['rk_city'] = array(
                 'label' => __( 'City', 'rk-check-fields' ),
                 'value' => $city,
+            );
+        }
+
+        if ( $pickup ) {
+            $fields['rk_pickup_date'] = array(
+                'label' => __( 'Pickup date', 'rk-check-fields' ),
+                'value' => $pickup,
             );
         }
 
