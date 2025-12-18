@@ -65,22 +65,28 @@
             fetchLocations();
         }
 
-        let mailInMessage =
-            "Good news!\n\n" +
-            "While your location is outside our door-to-door coverage area, " +
-            "you can mail in your knives using our premium mail-in service.\n\n" +
-            "We’ll send you a complete mailing kit and sharpen them to perfection.";
-
         // Override with options from backend if provided
         const opts = (typeof rk_check_fields_options !== 'undefined') ? rk_check_fields_options : {};
         const ENABLE_AUTO_PAYMENT = opts.enable_auto_payment == 1 || opts.enable_auto_payment === true;
         const PAYMENT_FOUND = opts.payment_found || 'cod';
         const PAYMENT_NOT_FOUND = opts.payment_not_found || 'other_payment';
         const ADD_BODY_CLASSES = opts.add_body_classes == 1 || opts.add_body_classes === true;
-
-        if ( opts.mailin_message ) {
-            mailInMessage = opts.mailin_message;
-        }
+        const DATE_FORMAT = opts.date_format || 'd-m-Y';
+        
+        // Get messages from settings
+        let mailInMessage = opts.mailin_message || 
+            "Good news!\n\n" +
+            "While your location is outside our door-to-door coverage area, " +
+            "you can mail in your knives using our premium mail-in service.\n\n" +
+            "We'll send you a complete mailing kit and sharpen them to perfection.";
+        
+        let cityFoundMessage = opts.city_found_message || 
+            "Hooray! You're within our door-to-door service area.\n" +
+            "Simply pick a preferred pick-up date, and we'll take care of the rest—collecting your knives, sharpening them to perfection, and delivering them back to you promptly.";
+        
+        let citySelectedMessage = opts.city_selected_message || 
+            "Hooray! You're within our door-to-door service area.\n" +
+            "Simply pick a preferred pick-up date, and we'll take care of the rest—collecting your knives, sharpening them to perfection, and delivering them back to you promptly.";
 
         // Find any search inputs (shipping, billing, or generic unprefixed)
         const searchInputs = document.querySelectorAll('[name="shipping_rk_city_search"], [name="billing_rk_city_search"], [name="rk_city_search"], #rk_city_search');
@@ -140,7 +146,7 @@
             if (dateInput && typeof flatpickr !== 'undefined') {
                 try {
                     fp = flatpickr(dateInput, {
-                        dateFormat: 'd-m-Y',
+                        dateFormat: DATE_FORMAT,
                         clickOpens: true,
                         disable: [date => date < new Date().setHours(0, 0, 0, 0)]
                     });
@@ -250,9 +256,7 @@
                         return;
                     }
 
-                    message.textContent =
-                        "Hooray! You're within our door-to-door service area.\n" +
-                        "Simply pick a preferred pick-up date, and we'll take care of the rest—collecting your knives, sharpening them to perfection, and delivering them back to you promptly.";
+                    message.textContent = cityFoundMessage;
 
                     console.log('[RK] matches', matches);
                     dropdown.classList.add('visible');
@@ -315,9 +319,7 @@
 
                             // show info and delivery days
                             const deliveryDays = (c.region.region_delivery_days && c.region.region_delivery_days.length) ? c.region.region_delivery_days.join(', ') : '';
-                            message.textContent =
-                                "Hooray! You're within our door-to-door service area.\n" +
-                                "Simply pick a preferred pick-up date, and we'll take care of the rest—collecting your knives, sharpening them to perfection, and delivering them back to you promptly.";
+                            message.textContent = citySelectedMessage;
 
                             cityInfo.innerHTML = `<strong>${c.city_name}</strong><br>Region: ${c.region.region_name}<br>Delivery Days: ${deliveryDays}`;
                             cityInfo.style.display = 'block';
@@ -352,7 +354,7 @@
                             if (!fp && dateInput && typeof flatpickr !== 'undefined') {
                                 try {
                                     fp = flatpickr(dateInput, {
-                                        dateFormat: 'd-m-Y',
+                                        dateFormat: DATE_FORMAT,
                                         clickOpens: true,
                                         disable: [date => date < new Date().setHours(0, 0, 0, 0)]
                                     });

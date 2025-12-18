@@ -106,7 +106,7 @@ class RK_Checkout_Fields {
         // Provide AJAX URL for JS fallback
         wp_localize_script( 'rk-checkout', 'rk_check_fields_ajax', array( 'ajax_url' => admin_url( 'admin-ajax.php' ) ) );
 
-        // Localize plugin options
+        // Localize plugin options (include all settings for frontend)
         $opts = $this->get_plugin_options();
         wp_localize_script( 'rk-checkout', 'rk_check_fields_options', $opts );
     }
@@ -200,13 +200,49 @@ class RK_Checkout_Fields {
     public function register_settings() {
         register_setting( 'rk_cf_settings', 'rk_cf_options', array( $this, 'sanitize_options' ) );
 
-        add_settings_section( 'rk_cf_main', __( 'RK Checkout Fields Settings', 'rk-check-fields' ), null, 'rk-checkout-fields' );
+        // Payment Settings Section
+        add_settings_section( 'rk_cf_payment', __( 'Payment Settings', 'rk-check-fields' ), array( $this, 'section_payment_callback' ), 'rk-checkout-fields' );
 
-        add_settings_field( 'enable_auto_payment', __( 'Enable auto payment selection', 'rk-check-fields' ), array( $this, 'field_enable_auto_payment' ), 'rk-checkout-fields', 'rk_cf_main' );
-        add_settings_field( 'payment_found', __( 'Payment method (city found)', 'rk-check-fields' ), array( $this, 'field_payment_found' ), 'rk-checkout-fields', 'rk_cf_main' );
-        add_settings_field( 'payment_not_found', __( 'Payment method (city not found)', 'rk-check-fields' ), array( $this, 'field_payment_not_found' ), 'rk-checkout-fields', 'rk_cf_main' );
-        add_settings_field( 'add_body_classes', __( 'Add body classes', 'rk-check-fields' ), array( $this, 'field_add_body_classes' ), 'rk-checkout-fields', 'rk_cf_main' );
-        add_settings_field( 'mailin_message', __( 'Mail-in message (no match)', 'rk-check-fields' ), array( $this, 'field_mailin_message' ), 'rk-checkout-fields', 'rk_cf_main' );
+        add_settings_field( 'enable_auto_payment', __( 'Enable auto payment selection', 'rk-check-fields' ), array( $this, 'field_enable_auto_payment' ), 'rk-checkout-fields', 'rk_cf_payment' );
+        add_settings_field( 'payment_found', __( 'Payment method (city found)', 'rk-check-fields' ), array( $this, 'field_payment_found' ), 'rk-checkout-fields', 'rk_cf_payment' );
+        add_settings_field( 'payment_not_found', __( 'Payment method (city not found)', 'rk-check-fields' ), array( $this, 'field_payment_not_found' ), 'rk-checkout-fields', 'rk_cf_payment' );
+
+        // Display Settings Section
+        add_settings_section( 'rk_cf_display', __( 'Display Settings', 'rk-check-fields' ), array( $this, 'section_display_callback' ), 'rk-checkout-fields' );
+
+        add_settings_field( 'add_body_classes', __( 'Add body classes', 'rk-check-fields' ), array( $this, 'field_add_body_classes' ), 'rk-checkout-fields', 'rk_cf_display' );
+        add_settings_field( 'date_format', __( 'Date picker format', 'rk-check-fields' ), array( $this, 'field_date_format' ), 'rk-checkout-fields', 'rk_cf_display' );
+
+        // Messages Section
+        add_settings_section( 'rk_cf_messages', __( 'Messages', 'rk-check-fields' ), array( $this, 'section_messages_callback' ), 'rk-checkout-fields' );
+
+        add_settings_field( 'mailin_message', __( 'Mail-in message (no match)', 'rk-check-fields' ), array( $this, 'field_mailin_message' ), 'rk-checkout-fields', 'rk_cf_messages' );
+        add_settings_field( 'city_found_message', __( 'City found message', 'rk-check-fields' ), array( $this, 'field_city_found_message' ), 'rk-checkout-fields', 'rk_cf_messages' );
+        add_settings_field( 'city_selected_message', __( 'City selected message', 'rk-check-fields' ), array( $this, 'field_city_selected_message' ), 'rk-checkout-fields', 'rk_cf_messages' );
+
+        // Field Labels Section
+        add_settings_section( 'rk_cf_labels', __( 'Field Labels', 'rk-check-fields' ), array( $this, 'section_labels_callback' ), 'rk-checkout-fields' );
+
+        add_settings_field( 'region_label', __( 'Region field label', 'rk-check-fields' ), array( $this, 'field_region_label' ), 'rk-checkout-fields', 'rk_cf_labels' );
+        add_settings_field( 'city_search_label', __( 'City search field label', 'rk-check-fields' ), array( $this, 'field_city_search_label' ), 'rk-checkout-fields', 'rk_cf_labels' );
+        add_settings_field( 'pickup_date_label', __( 'Pickup date field label', 'rk-check-fields' ), array( $this, 'field_pickup_date_label' ), 'rk-checkout-fields', 'rk_cf_labels' );
+        add_settings_field( 'city_search_placeholder', __( 'City search placeholder', 'rk-check-fields' ), array( $this, 'field_city_search_placeholder' ), 'rk-checkout-fields', 'rk_cf_labels' );
+    }
+
+    public function section_payment_callback() {
+        echo '<p>' . esc_html__( 'Configure automatic payment method selection based on city availability.', 'rk-check-fields' ) . '</p>';
+    }
+
+    public function section_display_callback() {
+        echo '<p>' . esc_html__( 'Configure display options and styling features.', 'rk-check-fields' ) . '</p>';
+    }
+
+    public function section_messages_callback() {
+        echo '<p>' . esc_html__( 'Customize messages shown to customers during checkout.', 'rk-check-fields' ) . '</p>';
+    }
+
+    public function section_labels_callback() {
+        echo '<p>' . esc_html__( 'Customize field labels and placeholders shown on the checkout page.', 'rk-check-fields' ) . '</p>';
     }
 
     public function sanitize_options( $input ) {
@@ -216,7 +252,14 @@ class RK_Checkout_Fields {
         $out['payment_found'] = sanitize_text_field( $input['payment_found'] ?: $defaults['payment_found'] );
         $out['payment_not_found'] = sanitize_text_field( $input['payment_not_found'] ?: $defaults['payment_not_found'] );
         $out['add_body_classes'] = ! empty( $input['add_body_classes'] ) ? 1 : 0;
+        $out['date_format'] = sanitize_text_field( $input['date_format'] ?: $defaults['date_format'] );
         $out['mailin_message'] = sanitize_textarea_field( $input['mailin_message'] ?: $defaults['mailin_message'] );
+        $out['city_found_message'] = sanitize_textarea_field( $input['city_found_message'] ?: $defaults['city_found_message'] );
+        $out['city_selected_message'] = sanitize_textarea_field( $input['city_selected_message'] ?: $defaults['city_selected_message'] );
+        $out['region_label'] = sanitize_text_field( $input['region_label'] ?: $defaults['region_label'] );
+        $out['city_search_label'] = sanitize_text_field( $input['city_search_label'] ?: $defaults['city_search_label'] );
+        $out['pickup_date_label'] = sanitize_text_field( $input['pickup_date_label'] ?: $defaults['pickup_date_label'] );
+        $out['city_search_placeholder'] = sanitize_text_field( $input['city_search_placeholder'] ?: $defaults['city_search_placeholder'] );
         return $out;
     }
 
@@ -226,49 +269,195 @@ class RK_Checkout_Fields {
             'payment_found' => 'cod',
             'payment_not_found' => 'other_payment',
             'add_body_classes' => 1,
-            'mailin_message' => "Good news!\n\nWhile your location is outside our door-to-door coverage area, you can mail in your knives using our premium mail-in service.\n\nWe’ll send you a complete mailing kit and sharpen them to perfection.",
+            'date_format' => 'd-m-Y',
+            'mailin_message' => "Good news!\n\nWhile your location is outside our door-to-door coverage area, you can mail in your knives using our premium mail-in service.\n\nWe'll send you a complete mailing kit and sharpen them to perfection.",
+            'city_found_message' => "Hooray! You're within our door-to-door service area.\nSimply pick a preferred pick-up date, and we'll take care of the rest—collecting your knives, sharpening them to perfection, and delivering them back to you promptly.",
+            'city_selected_message' => "Hooray! You're within our door-to-door service area.\nSimply pick a preferred pick-up date, and we'll take care of the rest—collecting your knives, sharpening them to perfection, and delivering them back to you promptly.",
+            'region_label' => __( 'Region', 'rk-check-fields' ),
+            'city_search_label' => __( 'City (search)', 'rk-check-fields' ),
+            'pickup_date_label' => __( 'Pickup date', 'rk-check-fields' ),
+            'city_search_placeholder' => __( 'Search your city', 'rk-check-fields' ),
         );
         $opts = get_option( 'rk_cf_options', array() );
         return wp_parse_args( $opts, $defaults );
     }
 
+    /**
+     * Get available WooCommerce payment methods
+     */
+    public function get_payment_methods() {
+        $methods = array();
+        if ( class_exists( 'WooCommerce' ) && function_exists( 'WC' ) ) {
+            $wc = WC();
+            if ( $wc && isset( $wc->payment_gateways ) ) {
+                $available_gateways = $wc->payment_gateways->get_available_payment_gateways();
+                if ( is_array( $available_gateways ) ) {
+                    foreach ( $available_gateways as $gateway_id => $gateway ) {
+                        if ( is_object( $gateway ) && method_exists( $gateway, 'get_title' ) ) {
+                            $methods[ $gateway_id ] = $gateway->get_title();
+                        }
+                    }
+                }
+            }
+        }
+        return $methods;
+    }
+
     public function field_enable_auto_payment() {
         $opts = $this->get_plugin_options();
-        echo '<input type="checkbox" name="rk_cf_options[enable_auto_payment]" value="1" ' . checked( 1, $opts['enable_auto_payment'], false ) . ' />';
+        echo '<label><input type="checkbox" name="rk_cf_options[enable_auto_payment]" value="1" ' . checked( 1, $opts['enable_auto_payment'], false ) . ' /> ' . esc_html__( 'Automatically select payment method based on city availability', 'rk-check-fields' ) . '</label>';
+        echo '<p class="description">' . esc_html__( 'When enabled, the plugin will automatically select the configured payment method when a city is found or not found.', 'rk-check-fields' ) . '</p>';
     }
 
     public function field_payment_found() {
         $opts = $this->get_plugin_options();
-        echo '<input type="text" name="rk_cf_options[payment_found]" value="' . esc_attr( $opts['payment_found'] ) . '" class="regular-text" />';
+        $methods = $this->get_payment_methods();
+        
+        if ( ! empty( $methods ) ) {
+            echo '<select name="rk_cf_options[payment_found]" class="regular-text">';
+            echo '<option value="">' . esc_html__( '-- Select Payment Method --', 'rk-check-fields' ) . '</option>';
+            foreach ( $methods as $method_id => $method_title ) {
+                echo '<option value="' . esc_attr( $method_id ) . '" ' . selected( $opts['payment_found'], $method_id, false ) . '>' . esc_html( $method_title ) . '</option>';
+            }
+            echo '</select>';
+        } else {
+            echo '<input type="text" name="rk_cf_options[payment_found]" value="' . esc_attr( $opts['payment_found'] ) . '" class="regular-text" placeholder="e.g., cod" />';
+            echo '<p class="description">' . esc_html__( 'Enter payment method ID (e.g., cod, bacs). Available methods will appear as dropdown if WooCommerce is active.', 'rk-check-fields' ) . '</p>';
+        }
+        echo '<p class="description">' . esc_html__( 'Payment method to automatically select when a city is found in the service area.', 'rk-check-fields' ) . '</p>';
     }
 
     public function field_payment_not_found() {
         $opts = $this->get_plugin_options();
-        echo '<input type="text" name="rk_cf_options[payment_not_found]" value="' . esc_attr( $opts['payment_not_found'] ) . '" class="regular-text" />';
+        $methods = $this->get_payment_methods();
+        
+        if ( ! empty( $methods ) ) {
+            echo '<select name="rk_cf_options[payment_not_found]" class="regular-text">';
+            echo '<option value="">' . esc_html__( '-- Select Payment Method --', 'rk-check-fields' ) . '</option>';
+            foreach ( $methods as $method_id => $method_title ) {
+                echo '<option value="' . esc_attr( $method_id ) . '" ' . selected( $opts['payment_not_found'], $method_id, false ) . '>' . esc_html( $method_title ) . '</option>';
+            }
+            echo '</select>';
+        } else {
+            echo '<input type="text" name="rk_cf_options[payment_not_found]" value="' . esc_attr( $opts['payment_not_found'] ) . '" class="regular-text" placeholder="e.g., other_payment" />';
+            echo '<p class="description">' . esc_html__( 'Enter payment method ID (e.g., cod, bacs). Available methods will appear as dropdown if WooCommerce is active.', 'rk-check-fields' ) . '</p>';
+        }
+        echo '<p class="description">' . esc_html__( 'Payment method to automatically select when a city is NOT found in the service area.', 'rk-check-fields' ) . '</p>';
     }
 
     public function field_add_body_classes() {
         $opts = $this->get_plugin_options();
-        echo '<input type="checkbox" name="rk_cf_options[add_body_classes]" value="1" ' . checked( 1, $opts['add_body_classes'], false ) . ' />';
+        echo '<label><input type="checkbox" name="rk_cf_options[add_body_classes]" value="1" ' . checked( 1, $opts['add_body_classes'], false ) . ' /> ' . esc_html__( 'Add CSS classes to body element', 'rk-check-fields' ) . '</label>';
+        echo '<p class="description">' . esc_html__( 'Adds classes like "rk-city-found", "rk-city-not-found", and "rk-city-selected" to the body element for custom styling.', 'rk-check-fields' ) . '</p>';
+    }
+
+    public function field_date_format() {
+        $opts = $this->get_plugin_options();
+        $formats = array(
+            'd-m-Y' => 'DD-MM-YYYY (e.g., 25-12-2024)',
+            'm-d-Y' => 'MM-DD-YYYY (e.g., 12-25-2024)',
+            'Y-m-d' => 'YYYY-MM-DD (e.g., 2024-12-25)',
+            'd/m/Y' => 'DD/MM/YYYY (e.g., 25/12/2024)',
+            'm/d/Y' => 'MM/DD/YYYY (e.g., 12/25/2024)',
+            'F j, Y' => 'Month Day, Year (e.g., December 25, 2024)',
+        );
+        
+        echo '<select name="rk_cf_options[date_format]" class="regular-text">';
+        foreach ( $formats as $format => $label ) {
+            echo '<option value="' . esc_attr( $format ) . '" ' . selected( $opts['date_format'], $format, false ) . '>' . esc_html( $label ) . '</option>';
+        }
+        echo '</select>';
+        echo '<p class="description">' . esc_html__( 'Date format for the pickup date picker. Uses flatpickr date format syntax.', 'rk-check-fields' ) . '</p>';
     }
 
     public function field_mailin_message() {
         $opts = $this->get_plugin_options();
         echo '<textarea name="rk_cf_options[mailin_message]" rows="6" cols="60" class="large-text">' . esc_textarea( $opts['mailin_message'] ) . '</textarea>';
+        echo '<p class="description">' . esc_html__( 'Message shown when customer searches for a city that is not in the service area. Supports line breaks.', 'rk-check-fields' ) . '</p>';
+    }
+
+    public function field_city_found_message() {
+        $opts = $this->get_plugin_options();
+        echo '<textarea name="rk_cf_options[city_found_message]" rows="4" cols="60" class="large-text">' . esc_textarea( $opts['city_found_message'] ) . '</textarea>';
+        echo '<p class="description">' . esc_html__( 'Message shown when matching cities are found. Supports line breaks.', 'rk-check-fields' ) . '</p>';
+    }
+
+    public function field_city_selected_message() {
+        $opts = $this->get_plugin_options();
+        echo '<textarea name="rk_cf_options[city_selected_message]" rows="4" cols="60" class="large-text">' . esc_textarea( $opts['city_selected_message'] ) . '</textarea>';
+        echo '<p class="description">' . esc_html__( 'Message shown after a city is selected. Supports line breaks.', 'rk-check-fields' ) . '</p>';
+    }
+
+    public function field_region_label() {
+        $opts = $this->get_plugin_options();
+        echo '<input type="text" name="rk_cf_options[region_label]" value="' . esc_attr( $opts['region_label'] ) . '" class="regular-text" />';
+        echo '<p class="description">' . esc_html__( 'Label for the region field on checkout.', 'rk-check-fields' ) . '</p>';
+    }
+
+    public function field_city_search_label() {
+        $opts = $this->get_plugin_options();
+        echo '<input type="text" name="rk_cf_options[city_search_label]" value="' . esc_attr( $opts['city_search_label'] ) . '" class="regular-text" />';
+        echo '<p class="description">' . esc_html__( 'Label for the city search field on checkout.', 'rk-check-fields' ) . '</p>';
+    }
+
+    public function field_pickup_date_label() {
+        $opts = $this->get_plugin_options();
+        echo '<input type="text" name="rk_cf_options[pickup_date_label]" value="' . esc_attr( $opts['pickup_date_label'] ) . '" class="regular-text" />';
+        echo '<p class="description">' . esc_html__( 'Label for the pickup date field on checkout.', 'rk-check-fields' ) . '</p>';
+    }
+
+    public function field_city_search_placeholder() {
+        $opts = $this->get_plugin_options();
+        echo '<input type="text" name="rk_cf_options[city_search_placeholder]" value="' . esc_attr( $opts['city_search_placeholder'] ) . '" class="regular-text" />';
+        echo '<p class="description">' . esc_html__( 'Placeholder text for the city search input field.', 'rk-check-fields' ) . '</p>';
     }
 
     public function settings_page() {
+        if ( ! current_user_can( 'manage_woocommerce' ) ) {
+            return;
+        }
+
+        // Show success message
+        if ( isset( $_GET['settings-updated'] ) ) {
+            add_settings_error( 'rk_cf_messages', 'rk_cf_message', __( 'Settings saved successfully!', 'rk-check-fields' ), 'success' );
+        }
+
+        settings_errors( 'rk_cf_messages' );
         ?>
-        <div class="wrap">
-            <h1><?php esc_html_e( 'RK Checkout Fields', 'rk-check-fields' ); ?></h1>
+        <div class="wrap rk-checkout-fields-settings">
+            <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
+            <p class="description"><?php esc_html_e( 'Configure the RK Checkout Fields plugin settings to customize the checkout experience.', 'rk-check-fields' ); ?></p>
+            
             <form method="post" action="options.php">
                 <?php
                 settings_fields( 'rk_cf_settings' );
                 do_settings_sections( 'rk-checkout-fields' );
-                submit_button();
+                submit_button( __( 'Save Settings', 'rk-check-fields' ) );
                 ?>
             </form>
         </div>
+        <style>
+            .rk-checkout-fields-settings .form-table th {
+                width: 250px;
+                padding: 20px 10px 20px 0;
+            }
+            .rk-checkout-fields-settings .form-table td {
+                padding: 15px 10px;
+            }
+            .rk-checkout-fields-settings .description {
+                color: #646970;
+                font-style: italic;
+                margin-top: 5px;
+            }
+            .rk-checkout-fields-settings h2 {
+                margin-top: 30px;
+                padding-bottom: 10px;
+                border-bottom: 1px solid #ddd;
+            }
+            .rk-checkout-fields-settings h2:first-of-type {
+                margin-top: 20px;
+            }
+        </style>
         <?php
     }
 
@@ -306,11 +495,14 @@ class RK_Checkout_Fields {
         $locations = $this->get_locations_data();
         $locations_json = htmlspecialchars( wp_json_encode( $locations ), ENT_QUOTES, 'UTF-8' );
 
+        // Get dynamic labels from settings
+        $opts = $this->get_plugin_options();
+
         // Shipping fields (primary placement)
         $fields['shipping']['rk_region'] = array(
             'type'     => 'text',
             'class'    => array( 'form-row-wide' ),
-            'label'    => __( 'Region', 'rk-check-fields' ),
+            'label'    => $opts['region_label'],
             'required' => false,
             'priority' => $priority,
         );
@@ -319,9 +511,9 @@ class RK_Checkout_Fields {
         $fields['shipping']['rk_city_search'] = array(
             'type'     => 'text',
             'class'    => array( 'form-row-wide' ),
-            'label'    => __( 'City (search)', 'rk-check-fields' ),
+            'label'    => $opts['city_search_label'],
             'required' => true,
-            'placeholder' => __( 'Search your city', 'rk-check-fields' ),
+            'placeholder' => $opts['city_search_placeholder'],
             'custom_attributes' => array( 'data-regions' => $locations_json ),
             'priority' => $priority + 1,
         );
@@ -338,7 +530,7 @@ class RK_Checkout_Fields {
         $fields['shipping']['rk_pickup_date'] = array(
             'type'     => 'text',
             'class'    => array( 'form-row-wide' ),
-            'label'    => __( 'Pickup date', 'rk-check-fields' ),
+            'label'    => $opts['pickup_date_label'],
             'required' => false,
             'priority' => $priority + 3,
         );
@@ -356,7 +548,7 @@ class RK_Checkout_Fields {
         $fields['billing']['rk_region'] = array(
             'type'     => 'text',
             'class'    => array( 'form-row-wide' ),
-            'label'    => __( 'Region', 'rk-check-fields' ),
+            'label'    => $opts['region_label'],
             'required' => true,
             'priority' => $billing_priority,
         );
@@ -365,9 +557,9 @@ class RK_Checkout_Fields {
         $fields['billing']['rk_city_search'] = array(
             'type'     => 'text',
             'class'    => array( 'form-row-wide' ),
-            'label'    => __( 'City (search)', 'rk-check-fields' ),
+            'label'    => $opts['city_search_label'],
             'required' => true,
-            'placeholder' => __( 'Search your city', 'rk-check-fields' ),
+            'placeholder' => $opts['city_search_placeholder'],
             'custom_attributes' => array( 'data-regions' => $locations_json ),
             'priority' => $billing_priority + 1,
         );
@@ -383,7 +575,7 @@ class RK_Checkout_Fields {
         $fields['billing']['rk_pickup_date'] = array(
             'type'     => 'text',
             'class'    => array( 'form-row-wide' ),
-            'label'    => __( 'Pickup date', 'rk-check-fields' ),
+            'label'    => $opts['pickup_date_label'],
             'required' => false,
             'priority' => $billing_priority + 3,
         );
