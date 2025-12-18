@@ -45,6 +45,10 @@ class RK_Checkout_Fields {
         // Print a hidden container with locations JSON so frontend can read it from the DOM
         add_action( 'woocommerce_before_checkout_form', array( $this, 'print_locations_div' ) );
 
+        // AJAX endpoint to provide locations JSON if needed
+        add_action( 'wp_ajax_nopriv_rk_get_locations', array( $this, 'ajax_get_locations' ) );
+        add_action( 'wp_ajax_rk_get_locations', array( $this, 'ajax_get_locations' ) );
+
         // Load translations
         load_plugin_textdomain( 'rk-check-fields', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 
@@ -69,6 +73,14 @@ class RK_Checkout_Fields {
     }
 
     /**
+     * AJAX handler to return locations JSON
+     */
+    public function ajax_get_locations() {
+        $locations = $this->get_locations_data();
+        wp_send_json_success( $locations );
+    }
+
+    /**
      * Enqueue scripts/styles on checkout page
      */
     public function enqueue_assets() {
@@ -87,6 +99,8 @@ class RK_Checkout_Fields {
         // Localize data for frontend
         $data = $this->get_locations_data();
         wp_localize_script( 'rk-checkout', 'rk_check_fields_data', $data );
+        // Provide AJAX URL for JS fallback
+        wp_localize_script( 'rk-checkout', 'rk_check_fields_ajax', array( 'ajax_url' => admin_url( 'admin-ajax.php' ) ) );
     }
 
     /**
