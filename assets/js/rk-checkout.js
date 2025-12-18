@@ -224,25 +224,52 @@
                         div.textContent = `${c.city_name} (${c.region.region_name})`;
 
                         div.onclick = () => {
+                            // Hide dropdown completely and update aria
                             dropdown.classList.remove('visible');
-                            searchInput.value = c.city_name;
+                            dropdown.style.display = 'none';
+                            searchInput.setAttribute('aria-expanded', 'false');
 
-                            // populate fields
+                            // set visible search value and blur input
+                            searchInput.value = c.city_name;
+                            try { searchInput.blur(); } catch ( e ) {}
+
+                            // populate hidden city field and trigger change so checkout updates
                             if ( cityInput ) {
                                 cityInput.value = c.city_name;
-                                // trigger change event so checkout updates
                                 cityInput.dispatchEvent(new Event('change'));
                             }
 
+                            // populate region field — supports <select> or text input
                             if ( regionInput ) {
-                                regionInput.value = c.region.region_name;
-                                regionInput.dispatchEvent(new Event('change'));
+                                const tag = (regionInput.tagName || '').toUpperCase();
+                                const regionName = c.region.region_name;
+
+                                if ( tag === 'SELECT' ) {
+                                    let matched = Array.from(regionInput.options).find(opt => opt.value === regionName || opt.text === regionName);
+                                    if ( matched ) {
+                                        regionInput.value = matched.value;
+                                    } else {
+                                        // If no matching option, try to add one and select it so the UI reflects the choice
+                                        try {
+                                            const opt = new Option(regionName, regionName, true, true);
+                                            regionInput.add(opt);
+                                            regionInput.value = regionName;
+                                        } catch ( e ) {
+                                            regionInput.value = regionName;
+                                        }
+                                    }
+                                    regionInput.dispatchEvent(new Event('change'));
+                                } else {
+                                    regionInput.value = regionName;
+                                    regionInput.dispatchEvent(new Event('change'));
+                                }
                             }
 
-                            // show info
+                            // show info and delivery days
                             const deliveryDays = (c.region.region_delivery_days && c.region.region_delivery_days.length) ? c.region.region_delivery_days.join(', ') : '';
                             message.textContent = "Hooray! You're within our door-to-door service area.";
                             cityInfo.innerHTML = `<strong>${c.city_name}</strong><br>Region: ${c.region.region_name}<br>Delivery Days: ${deliveryDays}`;
+                            cityInfo.style.display = 'block';
 
                             // Prepare allowed days for date picker based on pickup schedule
                             const enabledDays = [];
