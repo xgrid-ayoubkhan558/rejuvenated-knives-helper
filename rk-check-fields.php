@@ -49,6 +49,10 @@ class RK_Checkout_Fields {
         add_action( 'wp_ajax_nopriv_rk_get_locations', array( $this, 'ajax_get_locations' ) );
         add_action( 'wp_ajax_rk_get_locations', array( $this, 'ajax_get_locations' ) );
 
+        // Admin settings
+        add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
+        add_action( 'admin_init', array( $this, 'register_settings' ) );
+
         // Load translations
         load_plugin_textdomain( 'rk-check-fields', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 
@@ -101,6 +105,10 @@ class RK_Checkout_Fields {
         wp_localize_script( 'rk-checkout', 'rk_check_fields_data', $data );
         // Provide AJAX URL for JS fallback
         wp_localize_script( 'rk-checkout', 'rk_check_fields_ajax', array( 'ajax_url' => admin_url( 'admin-ajax.php' ) ) );
+
+        // Localize plugin options
+        $opts = $this->get_plugin_options();
+        wp_localize_script( 'rk-checkout', 'rk_check_fields_options', $opts );
     }
 
     /**
@@ -157,9 +165,10 @@ class RK_Checkout_Fields {
                         'end'     => get_term_meta( $region->term_id, "region_pickup_{$day}_end_time", true ),
                     );
                 }
-            }
+            
 
-            // Cities
+            }
+            // Cities (children of region)
             $cities = get_terms( array(
                 'taxonomy'   => 'locations',
                 'hide_empty' => false,
@@ -179,6 +188,88 @@ class RK_Checkout_Fields {
         }
 
         return $data;
+    }
+
+    /**
+     * Admin menu & settings
+     */
+    public function add_admin_menu() {
+        add_submenu_page( 'woocommerce', 'RK Checkout Fields', 'RK Checkout Fields', 'manage_woocommerce', 'rk-checkout-fields', array( $this, 'settings_page' ) );
+    }
+
+    public function register_settings() {
+        register_setting( 'rk_cf_settings', 'rk_cf_options', array( $this, 'sanitize_options' ) );
+
+        add_settings_section( 'rk_cf_main', __( 'RK Checkout Fields Settings', 'rk-check-fields' ), null, 'rk-checkout-fields' );
+
+        add_settings_field( 'enable_auto_payment', __( 'Enable auto payment selection', 'rk-check-fields' ), array( $this, 'field_enable_auto_payment' ), 'rk-checkout-fields', 'rk_cf_main' );
+        add_settings_field( 'payment_found', __( 'Payment method (city found)', 'rk-check-fields' ), array( $this, 'field_payment_found' ), 'rk-checkout-fields', 'rk_cf_main' );
+        add_settings_field( 'payment_not_found', __( 'Payment method (city not found)', 'rk-check-fields' ), array( $this, 'field_payment_not_found' ), 'rk-checkout-fields', 'rk_cf_main' );
+        add_settings_field( 'add_body_classes', __( 'Add body classes', 'rk-check-fields' ), array( $this, 'field_add_body_classes' ), 'rk-checkout-fields', 'rk_cf_main' );
+        add_settings_field( 'mailin_message', __( 'Mail-in message (no match)', 'rk-check-fields' ), array( $this, 'field_mailin_message' ), 'rk-checkout-fields', 'rk_cf_main' );
+    }
+
+    public function sanitize_options( $input ) {
+        $defaults = $this->get_plugin_options();
+        $out = array();
+        $out['enable_auto_payment'] = ! empty( $input['enable_auto_payment'] ) ? 1 : 0;
+        $out['payment_found'] = sanitize_text_field( $input['payment_found'] ?: $defaults['payment_found'] );
+        $out['payment_not_found'] = sanitize_text_field( $input['payment_not_found'] ?: $defaults['payment_not_found'] );
+        $out['add_body_classes'] = ! empty( $input['add_body_classes'] ) ? 1 : 0;
+        $out['mailin_message'] = sanitize_textarea_field( $input['mailin_message'] ?: $defaults['mailin_message'] );
+        return $out;
+    }
+
+    public function get_plugin_options() {
+        $defaults = array(
+            'enable_auto_payment' => 1,
+            'payment_found' => 'cod',
+            'payment_not_found' => 'other_payment',
+            'add_body_classes' => 1,
+            'mailin_message' => "Good news!\n\nWhile your location is outside our door-to-door coverage area, you can mail in your knives using our premium mail-in service.\n\nWe’ll send you a complete mailing kit and sharpen them to perfection.",
+        );
+        $opts = get_option( 'rk_cf_options', array() );
+        return wp_parse_args( $opts, $defaults );
+    }
+
+    public function field_enable_auto_payment() {
+        $opts = $this->get_plugin_options();
+        echo '<input type="checkbox" name="rk_cf_options[enable_auto_payment]" value="1" ' . checked( 1, $opts['enable_auto_payment'], false ) . ' />';
+    }
+
+    public function field_payment_found() {
+        $opts = $this->get_plugin_options();
+        echo '<input type="text" name="rk_cf_options[payment_found]" value="' . esc_attr( $opts['payment_found'] ) . '" class="regular-text" />';
+    }
+
+    public function field_payment_not_found() {
+        $opts = $this->get_plugin_options();
+        echo '<input type="text" name="rk_cf_options[payment_not_found]" value="' . esc_attr( $opts['payment_not_found'] ) . '" class="regular-text" />';
+    }
+
+    public function field_add_body_classes() {
+        $opts = $this->get_plugin_options();
+        echo '<input type="checkbox" name="rk_cf_options[add_body_classes]" value="1" ' . checked( 1, $opts['add_body_classes'], false ) . ' />';
+    }
+
+    public function field_mailin_message() {
+        $opts = $this->get_plugin_options();
+        echo '<textarea name="rk_cf_options[mailin_message]" rows="6" cols="60" class="large-text">' . esc_textarea( $opts['mailin_message'] ) . '</textarea>';
+    }
+
+    public function settings_page() {
+        ?>
+        <div class="wrap">
+            <h1><?php esc_html_e( 'RK Checkout Fields', 'rk-check-fields' ); ?></h1>
+            <form method="post" action="options.php">
+                <?php
+                settings_fields( 'rk_cf_settings' );
+                do_settings_sections( 'rk-checkout-fields' );
+                submit_button();
+                ?>
+            </form>
+        </div>
+        <?php
     }
 
     /**

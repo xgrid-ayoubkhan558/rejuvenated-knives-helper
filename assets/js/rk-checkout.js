@@ -65,11 +65,22 @@
             fetchLocations();
         }
 
-        const mailInMessage =
+        let mailInMessage =
             "Good news!\n\n" +
             "While your location is outside our door-to-door coverage area, " +
             "you can mail in your knives using our premium mail-in service.\n\n" +
             "We’ll send you a complete mailing kit and sharpen them to perfection.";
+
+        // Override with options from backend if provided
+        const opts = (typeof rk_check_fields_options !== 'undefined') ? rk_check_fields_options : {};
+        const ENABLE_AUTO_PAYMENT = opts.enable_auto_payment == 1 || opts.enable_auto_payment === true;
+        const PAYMENT_FOUND = opts.payment_found || 'cod';
+        const PAYMENT_NOT_FOUND = opts.payment_not_found || 'other_payment';
+        const ADD_BODY_CLASSES = opts.add_body_classes == 1 || opts.add_body_classes === true;
+
+        if ( opts.mailin_message ) {
+            mailInMessage = opts.mailin_message;
+        }
 
         // Find any search inputs (shipping, billing, or generic unprefixed)
         const searchInputs = document.querySelectorAll('[name="shipping_rk_city_search"], [name="billing_rk_city_search"], [name="rk_city_search"], #rk_city_search');
@@ -181,7 +192,13 @@
                 console.log('[RK] input:', { q: q, citiesCount: cities.length });
 
                 if (!q) {
-                    message.textContent = '';                    try { document.body.classList.remove('rk-city-found', 'rk-city-not-found', 'rk-city-selected'); } catch (e) {}                    return;
+                    message.textContent = '';
+                    try {
+                        if ( ADD_BODY_CLASSES ) {
+                            document.body.classList.remove('rk-city-found', 'rk-city-not-found', 'rk-city-selected');
+                        }
+                    } catch (e) {}
+                    return;
                 }
 
                 // If cities list is empty attempt to fetch synchronously before searching
@@ -214,16 +231,20 @@
 
                         // Body classes and select fallback payment
                         try {
-                            document.body.classList.add('rk-city-not-found');
-                            document.body.classList.remove('rk-city-found', 'rk-city-selected');
+                            if ( ADD_BODY_CLASSES ) {
+                                document.body.classList.add('rk-city-not-found');
+                                document.body.classList.remove('rk-city-found', 'rk-city-selected');
+                            }
                         } catch (e) {}
-                        // Select fallback payment method (other_payment)
-                        const fallback = document.querySelector('input[name="payment_method"][value="other_payment"], input#payment_method_other_payment');
-                        if (fallback) {
-                            try {
-                                fallback.checked = true;
-                                fallback.dispatchEvent(new Event('change'));
-                            } catch (e) {}
+                        // Select fallback payment method (configured via settings)
+                        if ( ENABLE_AUTO_PAYMENT && PAYMENT_NOT_FOUND ) {
+                            const fallback = document.querySelector('input[name="payment_method"][value="' + PAYMENT_NOT_FOUND + '"], input#payment_method_' + PAYMENT_NOT_FOUND);
+                            if (fallback) {
+                                try {
+                                    fallback.checked = true;
+                                    fallback.dispatchEvent(new Event('change'));
+                                } catch (e) {}
+                            }
                         }
 
                         return;
@@ -239,8 +260,10 @@
                     searchInput.setAttribute('aria-expanded', 'true');
                     // Mark body that matches exist (not necessarily selected yet)
                     try {
-                        document.body.classList.add('rk-city-found');
-                        document.body.classList.remove('rk-city-not-found', 'rk-city-selected');
+                        if ( ADD_BODY_CLASSES ) {
+                            document.body.classList.add('rk-city-found');
+                            document.body.classList.remove('rk-city-not-found', 'rk-city-selected');
+                        }
                     } catch (e) {}
 
                     matches.forEach(c => {
@@ -299,17 +322,22 @@
                             cityInfo.innerHTML = `<strong>${c.city_name}</strong><br>Region: ${c.region.region_name}<br>Delivery Days: ${deliveryDays}`;
                             cityInfo.style.display = 'block';
 
-                            // mark selected and prefer COD payment
+                            // mark selected and prefer configured payment method
                             try {
-                                document.body.classList.add('rk-city-selected', 'rk-city-found');
-                                document.body.classList.remove('rk-city-not-found');
+                                if ( ADD_BODY_CLASSES ) {
+                                    document.body.classList.add('rk-city-selected', 'rk-city-found');
+                                    document.body.classList.remove('rk-city-not-found');
+                                }
                             } catch (e) {}
-                            const cod = document.querySelector('input[name="payment_method"][value="cod"], input#payment_method_cod');
-                            if ( cod ) {
-                                try {
-                                    cod.checked = true;
-                                    cod.dispatchEvent(new Event('change'));
-                                } catch (e) {}
+
+                            if ( ENABLE_AUTO_PAYMENT && PAYMENT_FOUND ) {
+                                const foundMethod = document.querySelector('input[name="payment_method"][value="' + PAYMENT_FOUND + '"], input#payment_method_' + PAYMENT_FOUND);
+                                if ( foundMethod ) {
+                                    try {
+                                        foundMethod.checked = true;
+                                        foundMethod.dispatchEvent(new Event('change'));
+                                    } catch (e) {}
+                                }
                             }
 
                             // Prepare allowed days for date picker based on pickup schedule
