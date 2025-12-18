@@ -181,8 +181,7 @@
                 console.log('[RK] input:', { q: q, citiesCount: cities.length });
 
                 if (!q) {
-                    message.textContent = '';
-                    return;
+                    message.textContent = '';                    try { document.body.classList.remove('rk-city-found', 'rk-city-not-found', 'rk-city-selected'); } catch (e) {}                    return;
                 }
 
                 // If cities list is empty attempt to fetch synchronously before searching
@@ -212,6 +211,21 @@
                             dateInput.required = false;
                         }
                         searchInput.setAttribute('aria-expanded', 'false');
+
+                        // Body classes and select fallback payment
+                        try {
+                            document.body.classList.add('rk-city-not-found');
+                            document.body.classList.remove('rk-city-found', 'rk-city-selected');
+                        } catch (e) {}
+                        // Select fallback payment method (other_payment)
+                        const fallback = document.querySelector('input[name="payment_method"][value="other_payment"], input#payment_method_other_payment');
+                        if (fallback) {
+                            try {
+                                fallback.checked = true;
+                                fallback.dispatchEvent(new Event('change'));
+                            } catch (e) {}
+                        }
+
                         return;
                     }
 
@@ -223,6 +237,11 @@
                     dropdown.classList.add('visible');
                     dropdown.style.display = 'block';
                     searchInput.setAttribute('aria-expanded', 'true');
+                    // Mark body that matches exist (not necessarily selected yet)
+                    try {
+                        document.body.classList.add('rk-city-found');
+                        document.body.classList.remove('rk-city-not-found', 'rk-city-selected');
+                    } catch (e) {}
 
                     matches.forEach(c => {
                         const div = document.createElement('div');
@@ -279,6 +298,19 @@
 
                             cityInfo.innerHTML = `<strong>${c.city_name}</strong><br>Region: ${c.region.region_name}<br>Delivery Days: ${deliveryDays}`;
                             cityInfo.style.display = 'block';
+
+                            // mark selected and prefer COD payment
+                            try {
+                                document.body.classList.add('rk-city-selected', 'rk-city-found');
+                                document.body.classList.remove('rk-city-not-found');
+                            } catch (e) {}
+                            const cod = document.querySelector('input[name="payment_method"][value="cod"], input#payment_method_cod');
+                            if ( cod ) {
+                                try {
+                                    cod.checked = true;
+                                    cod.dispatchEvent(new Event('change'));
+                                } catch (e) {}
+                            }
 
                             // Prepare allowed days for date picker based on pickup schedule
                             const enabledDays = [];
