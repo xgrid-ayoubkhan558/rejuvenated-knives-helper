@@ -19,7 +19,7 @@
             }
         } else {
             // fallback: look for the attribute on any search field (prefixed or unprefixed)
-            const searchSource = document.querySelector('[name="billing_rk_city_search"], [name="rk_city_search"], #rk_city_search');
+            const searchSource = document.querySelector('[name="billing_rk_city_search"], [name="rk_city_search"], #billing_rk_city_search');
             if (searchSource && searchSource.dataset && searchSource.dataset.regions) {
                 try {
                     data = JSON.parse(searchSource.dataset.regions);
@@ -135,7 +135,7 @@
             }
 
             try {
-                // Check all possible city input fields
+                // Check all possible city input fields (UPDATED: billing_ prefix)
                 const allCityInputs = document.querySelectorAll('[name="billing_rk_city"], #billing_rk_city');
                 let hasAnyCitySelected = false;
 
@@ -194,15 +194,30 @@
         }
 
         // Find any search inputs (billing only now)
-        const searchInputs = document.querySelectorAll('[name="billing_rk_city_search"], [name="rk_city_search"], #rk_city_search');
+        const searchInputs = document.querySelectorAll('[name="billing_rk_city_search"], #billing_rk_city_search');
+
+        console.log('[RK] Found search inputs:', searchInputs.length);
 
         searchInputs.forEach(searchInput => {
-            // base may be 'shipping_' or 'billing_' or empty string for unprefixed
-            const base = (searchInput.name || '').replace(/rk_city_search$/, '');
+            // CRITICAL: Always use billing_ prefix for field selectors
+            // The hidden city field is manually created with name="billing_rk_city"
+            const cityInput = document.querySelector('[name="billing_rk_city"], #billing_rk_city');
+            const regionInput = document.querySelector('[name="billing_rk_region"], #billing_rk_region');
+            const dateInput = document.querySelector('[name="billing_rk_pickup_date"], #billing_rk_pickup_date');
 
-            const cityInput = document.querySelector('[name="' + base + 'rk_city"]');
-            const regionInput = document.querySelector('[name="' + base + 'rk_region"]');
-            const dateInput = document.querySelector('[name="' + base + 'rk_pickup_date"]');
+            console.log('[RK] Fields found:', {
+                cityInput: cityInput ? 'YES' : 'NO',
+                regionInput: regionInput ? 'YES' : 'NO',
+                dateInput: dateInput ? 'YES' : 'NO'
+            });
+
+            // Verify hidden city field exists
+            if (!cityInput) {
+                console.error('[RK] CRITICAL: Hidden city field (billing_rk_city) not found in DOM!');
+                console.log('[RK] Available inputs:', Array.from(document.querySelectorAll('input[type="hidden"]')).map(i => i.name));
+            } else {
+                console.log('[RK] Hidden city field found:', cityInput.id, 'value:', cityInput.value);
+            }
 
             // Create or reuse UI elements: dropdown, message, selected info, date wrapper
             let wrapper = searchInput.parentNode.querySelector('.rk-city-wrapper');
@@ -316,7 +331,9 @@
                         }
                     });
                 }
+                // CRITICAL: Clear the HIDDEN city field (billing_rk_city)
                 if (cityInput) {
+                    console.log('[RK] Clearing hidden city field');
                     cityInput.value = '';
                     cityInput.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
                 }
@@ -328,6 +345,7 @@
             // Also listen for changes on the hidden city field
             if (cityInput) {
                 cityInput.addEventListener('change', function() {
+                    console.log('[RK] Hidden city field changed:', cityInput.value);
                     updateCityFieldClasses(searchInput, cityInput);
                     updateCityFieldRequired(searchInput, cityInput);
                     updateBodyCityClasses(searchInput, cityInput);
@@ -342,6 +360,8 @@
                     const searchValue = (searchInput.value || '').trim();
                     const cityValue = (cityInput ? cityInput.value || '' : '').trim();
                     const hasValue = searchValue.length > 0 || cityValue.length > 0;
+                    
+                    console.log('[RK] Form submission check:', { searchValue, cityValue, hasValue });
                     
                     if (hasValue) {
                         // Remove required attribute to prevent validation error
@@ -405,6 +425,8 @@
                         const searchValue = (searchInput.value || '').trim();
                         const cityValue = (cityInput ? cityInput.value || '' : '').trim();
                         const hasValue = searchValue.length > 0 || cityValue.length > 0;
+                        
+                        console.log('[RK] checkout_place_order:', { searchValue, cityValue, hasValue });
                         
                         if (hasValue) {
                             // Remove any validation errors
@@ -512,8 +534,9 @@
                             document.body.classList.add('rk-city-not-selected');
                         }
                     } catch (e) {}
-                    // Clear city input when search is cleared
+                    // CRITICAL: Clear the HIDDEN city field when search is cleared
                     if (cityInput) {
+                        console.log('[RK] Search cleared - clearing hidden city field');
                         cityInput.value = '';
                         cityInput.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
                     }
@@ -539,7 +562,10 @@
                         dropdown.style.display = 'none';
                         message.textContent = mailInMessage;
                         console.log('[RK] no matches for', q);
+                        
+                        // CRITICAL: Clear the HIDDEN city field when no matches
                         if (cityInput) {
+                            console.log('[RK] No matches - clearing hidden city field');
                             cityInput.value = '';
                             cityInput.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
                         }
@@ -649,10 +675,17 @@
                                 }
                             }
 
-                            // populate hidden city field and trigger change so checkout updates
+                            // ============================================
+                            // CRITICAL: Update the HIDDEN city field
+                            // This is what gets saved to the order
+                            // ============================================
                             if (cityInput) {
+                                console.log('[RK] City selected - updating hidden field:', c.city_name);
                                 cityInput.value = c.city_name;
                                 cityInput.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+                                
+                                // Verify the value was set
+                                console.log('[RK] Hidden field value after update:', cityInput.value);
                                 
                                 // Remove validation errors from city field
                                 const cityFieldRow = cityInput.closest('.form-row, .woocommerce-input-wrapper, p');
@@ -680,6 +713,8 @@
                                     submitButton.disabled = false;
                                     submitButton.removeAttribute('disabled');
                                 }
+                            } else {
+                                console.error('[RK] CRITICAL: cityInput not found when trying to set value!');
                             }
 
                             // Update classes and required state after city selection
@@ -691,6 +726,8 @@
                             if (regionInput) {
                                 const tag = (regionInput.tagName || '').toUpperCase();
                                 const regionName = c.region.region_name;
+
+                                console.log('[RK] Updating region field:', regionName);
 
                                 // Make sure region field is read-only
                                 if (tag !== 'SELECT') {
@@ -913,6 +950,8 @@
     // Re-initialize region fields when WooCommerce updates checkout (AJAX)
     if (typeof jQuery !== 'undefined') {
         jQuery(document.body).on('updated_checkout', function() {
+            console.log('[RK] Checkout updated - re-initializing fields');
+            
             const regionFields = document.querySelectorAll('[name="billing_rk_region"], #billing_rk_region');
             regionFields.forEach(field => {
                 if (field.tagName && field.tagName.toUpperCase() !== 'SELECT') {
@@ -922,14 +961,23 @@
                 }
             });
 
+            // CRITICAL: Check if hidden city field exists after checkout update
+            const hiddenCityField = document.querySelector('[name="billing_rk_city"], #billing_rk_city');
+            if (!hiddenCityField) {
+                console.error('[RK] CRITICAL: Hidden city field not found after checkout update!');
+            } else {
+                console.log('[RK] Hidden city field exists, value:', hiddenCityField.value);
+            }
+
             // Re-check and remove required attribute from city search fields if they have values
-            const allSearchInputs = document.querySelectorAll('[name="shipping_rk_city_search"], [name="billing_rk_city_search"]');
+            const allSearchInputs = document.querySelectorAll('[name="billing_rk_city_search"]');
             allSearchInputs.forEach(searchInput => {
-                const base = (searchInput.name || '').replace(/rk_city_search$/, '');
-                const cityInput = document.querySelector('[name="' + base + 'rk_city"]');
+                const cityInput = document.querySelector('[name="billing_rk_city"], #billing_rk_city');
                 const searchValue = (searchInput.value || '').trim();
                 const cityValue = (cityInput ? cityInput.value || '' : '').trim();
                 const hasValue = searchValue.length > 0 || cityValue.length > 0;
+                
+                console.log('[RK] After checkout update - field values:', { searchValue, cityValue, hasValue });
                 
                 if (hasValue) {
                     searchInput.removeAttribute('required');
@@ -948,13 +996,16 @@
 
         // Intercept checkout validation errors and remove city search field errors if field has value
         jQuery(document.body).on('checkout_error', function() {
-            const allSearchInputs = document.querySelectorAll('[name="shipping_rk_city_search"], [name="billing_rk_city_search"]');
+            console.log('[RK] Checkout error - checking for field errors');
+            
+            const allSearchInputs = document.querySelectorAll('[name="billing_rk_city_search"]');
             allSearchInputs.forEach(searchInput => {
-                const base = (searchInput.name || '').replace(/rk_city_search$/, '');
-                const cityInput = document.querySelector('[name="' + base + 'rk_city"]');
+                const cityInput = document.querySelector('[name="billing_rk_city"], #billing_rk_city');
                 const searchValue = (searchInput.value || '').trim();
                 const cityValue = (cityInput ? cityInput.value || '' : '').trim();
                 const hasValue = searchValue.length > 0 || cityValue.length > 0;
+                
+                console.log('[RK] Checkout error - field values:', { searchValue, cityValue, hasValue });
                 
                 if (hasValue) {
                     // Remove validation errors from this field
@@ -966,6 +1017,7 @@
                             // Check if error message is about this field being required
                             const errorText = errorLabel.textContent || '';
                             if (errorText.toLowerCase().includes('city') && errorText.toLowerCase().includes('required')) {
+                                console.log('[RK] Removing city required error');
                                 errorLabel.remove();
                             }
                         }
@@ -977,6 +1029,7 @@
                         const noticeText = notice.textContent || '';
                         if (noticeText.toLowerCase().includes('city') && noticeText.toLowerCase().includes('required') && 
                             (noticeText.includes('search') || noticeText.includes('rk_city_search'))) {
+                            console.log('[RK] Removing city error from notices');
                             notice.remove();
                         }
                     });
@@ -991,13 +1044,21 @@
         if (checkoutForm) {
             // Use capture phase to run before WooCommerce validation
             checkoutForm.addEventListener('submit', function(e) {
+                console.log('[RK] Form submitting - final check');
+                
                 const allSearchInputs = document.querySelectorAll('[name="billing_rk_city_search"]');
                 allSearchInputs.forEach(searchInput => {
-                    const base = (searchInput.name || '').replace(/rk_city_search$/, '');
-                    const cityInput = document.querySelector('[name="' + base + 'rk_city"]');
+                    const cityInput = document.querySelector('[name="billing_rk_city"], #billing_rk_city');
                     const searchValue = (searchInput.value || '').trim();
                     const cityValue = (cityInput ? cityInput.value || '' : '').trim();
                     const hasValue = searchValue.length > 0 || cityValue.length > 0;
+                    
+                    console.log('[RK] Form submit - final values:', { 
+                        searchValue, 
+                        cityValue, 
+                        hasValue,
+                        hiddenFieldExists: !!cityInput 
+                    });
                     
                     if (hasValue) {
                         searchInput.removeAttribute('required');
