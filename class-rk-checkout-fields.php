@@ -8,7 +8,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class RK_Checkout_Fields {
     public function __construct() {
-        add_action( 'plugins_loaded', array( $this, 'init' ) );
+        // This class is instantiated on `plugins_loaded` (from the main plugin file).
+        // If we also hook `init()` to `plugins_loaded`, it will never run because that
+        // action has already fired. Hook into WooCommerce's init point instead.
+        if ( did_action( 'woocommerce_init' ) ) {
+            $this->init();
+            return;
+        }
+
+        add_action( 'woocommerce_init', array( $this, 'init' ) );
     }
 
     public function init() {
@@ -57,9 +65,6 @@ class RK_Checkout_Fields {
         // Admin settings
         add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
         add_action( 'admin_init', array( $this, 'register_settings' ) );
-
-        // Load translations
-        load_plugin_textdomain( 'rk-helper', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 
     }
 

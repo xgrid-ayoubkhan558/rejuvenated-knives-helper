@@ -18,9 +18,13 @@ class RK_Body_Classes {
      */
     public function add_cart_total_body_class( $classes ) {
         // Ensure WooCommerce cart is available
+        if ( function_exists( 'WC' ) && null === WC()->cart && function_exists( 'wc_load_cart' ) && ! is_admin() ) {
+            wc_load_cart();
+        }
+
         if ( function_exists( 'WC' ) && null !== WC()->cart ) {
             
-            $cart_total = WC()->cart->get_total( 'edit' ); // Get raw total
+            $cart_total = (float) WC()->cart->get_total( 'edit' ); // Get raw total
             
             // Format to a clean string for CSS (e.g., 120.50 becomes 12050)
             $formatted_total = number_format( $cart_total, 2, '', '' );
