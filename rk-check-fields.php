@@ -830,3 +830,6 @@ class RK_Checkout_Fields {
 }
 
 new RK_Checkout_Fields();
+
+
+

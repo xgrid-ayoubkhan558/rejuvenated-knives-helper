@@ -61,10 +61,32 @@
     }
 
     // Body class management
-    function updateBodyClass(hasCity) {
+    function updateBodyClass(hasCity, state = null) {
         if (!config.addBodyClasses) return;
-        document.body.classList.toggle('rk-city-selected', hasCity);
-        document.body.classList.toggle('rk-city-not-selected', !hasCity);
+        
+        // Remove all state classes
+        document.body.classList.remove('rk-city-selected', 'rk-city-not-selected', 'rk-city-found', 'rk-city-not-found');
+        
+        // Add appropriate class
+        if (hasCity) {
+            document.body.classList.add('rk-city-selected');
+        } else {
+            document.body.classList.add('rk-city-not-selected');
+        }
+        
+        // Add state class if provided
+        if (state) {
+            document.body.classList.add(`rk-city-${state}`);
+        }
+        
+        // Also set data attribute for CSS targeting
+        if (state === 'found' || hasCity) {
+            document.body.setAttribute('data-payment-method', config.paymentFound);
+        } else if (state === 'not-found') {
+            document.body.setAttribute('data-payment-method', config.paymentNotFound);
+        } else {
+            document.body.removeAttribute('data-payment-method');
+        }
     }
 
     // Payment method selection
@@ -148,7 +170,7 @@
             if (regionInput) regionInput.value = '';
             if (datePicker) datePicker.clear();
             if (dateRow) dateRow.style.display = 'none';
-            updateBodyClass(false);
+            updateBodyClass(false, null);
             trigger(cityInput, 'change');
         }
 
@@ -171,12 +193,7 @@
                 message.textContent = config.messages.mailIn;
                 cityInput.value = '';
                 if (regionInput) regionInput.value = '';
-                updateBodyClass(false);
-                
-                if (config.addBodyClasses) {
-                    document.body.classList.add('rk-city-not-found');
-                    document.body.classList.remove('rk-city-found');
-                }
+                updateBodyClass(false, 'not-found');
                 
                 if (config.enableAutoPayment) {
                     selectPaymentMethod(config.paymentNotFound);
@@ -189,10 +206,7 @@
             dropdown.innerHTML = '';
             dropdown.style.display = 'block';
             
-            if (config.addBodyClasses) {
-                document.body.classList.add('rk-city-found');
-                document.body.classList.remove('rk-city-not-found');
-            }
+            updateBodyClass(false, 'found');
 
             matches.forEach(city => {
                 const option = document.createElement('div');
@@ -225,11 +239,7 @@
             if (regionInput) removeError(regionInput);
             
             // Update classes
-            updateBodyClass(true);
-            if (config.addBodyClasses) {
-                document.body.classList.add('rk-city-selected');
-                document.body.classList.remove('rk-city-not-found', 'rk-city-not-selected');
-            }
+            updateBodyClass(true, 'selected');
             
             // Payment method
             if (config.enableAutoPayment) {
@@ -268,13 +278,17 @@
         }
 
         // Initialize state
-        updateBodyClass(!!cityInput.value);
-        if (cityInput.value && dateInput) {
-            const city = cities.find(c => c.city_name === cityInput.value);
-            if (city) {
-                datePicker = initDatePicker(dateInput, city.region);
-                if (dateRow) dateRow.style.display = '';
+        if (cityInput.value) {
+            updateBodyClass(true, 'selected');
+            if (dateInput) {
+                const city = cities.find(c => c.city_name === cityInput.value);
+                if (city) {
+                    datePicker = initDatePicker(dateInput, city.region);
+                    if (dateRow) dateRow.style.display = '';
+                }
             }
+        } else {
+            updateBodyClass(false, null);
         }
     }
 
