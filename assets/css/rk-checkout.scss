@@ -2,9 +2,9 @@
     position: relative;
 
     .rk-city-dropdown {
-        // position: absolute;
-        // top: 100%;
-        // left: 0;
+        position: absolute;
+        top: -8px;
+        left: 0;
         width: 100%;
         z-index: 9999;
         background: #fff;
@@ -55,16 +55,22 @@
     margin-top: 8px;
 }
 
-#rk_region_field {
-    // intentionally empty
-}
+#billing_rk_region_field {}
 
-#rk_city_search_field {
-    padding: relative;
+#billing_rk_city_search_field {
+    position: relative;
 
     .woocommerce-input-wrapper {
         display: flex;
         flex-direction: column;
         gap: 8px;
     }
+}
+
+.rk-city-not-found {
+
+}
+
+.rk-city-found {
+    
 }
