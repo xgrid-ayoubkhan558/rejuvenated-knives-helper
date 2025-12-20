@@ -17,7 +17,6 @@ function rk_helper_init() {
     
     $includes = array(
         'class-rk-checkout-fields.php',
-        'class-rk-body-classes.php',
         'class-rk-woo-ajax-cart-count.php',
         'class-rk-woo-ajax-cart-count-admin.php',
     );
@@ -32,10 +31,6 @@ function rk_helper_init() {
 
     if ( class_exists( 'RK_Checkout_Fields' ) ) {
         new RK_Checkout_Fields();
-    }
-
-    if ( class_exists( 'RK_Body_Classes' ) ) {
-        new RK_Body_Classes();
     }
 
     // Initialize AJAX cart count functionality

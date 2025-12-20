@@ -23,13 +23,33 @@
     let cities = [];
 
     function loadData() {
+        console.log('[RK Debug] Attempting to load data...');
         const dataHolder = document.getElementById('rk-check-fields-data');
+        console.log('[RK Debug] Data holder element:', dataHolder);
+        
         if (dataHolder?.dataset?.regions) {
             try {
                 regionsData = JSON.parse(dataHolder.dataset.regions);
+                console.log('[RK Debug] Parsed regions data:', regionsData);
                 buildCitiesList();
+                console.log('[RK Debug] Cities list built:', cities);
             } catch (e) {
-                console.error('[RK] Failed to parse regions data');
+                console.error('[RK] Failed to parse regions data', e);
+            }
+        } else {
+            console.warn('[RK Debug] No regions data found in DOM');
+            // Try to load via AJAX as fallback
+            if (window.rk_check_fields_ajax?.ajax_url) {
+                fetch(window.rk_check_fields_ajax.ajax_url + '?action=rk_get_locations')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.data) {
+                            regionsData = data.data;
+                            buildCitiesList();
+                            console.log('[RK Debug] Loaded regions via AJAX:', regionsData);
+                        }
+                    })
+                    .catch(error => console.error('[RK Debug] AJAX fallback failed:', error));
             }
         }
     }

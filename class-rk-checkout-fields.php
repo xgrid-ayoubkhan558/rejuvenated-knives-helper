@@ -91,7 +91,7 @@ class RK_Checkout_Fields {
 
         $locations_json = htmlspecialchars( wp_json_encode( $locations ), ENT_QUOTES, 'UTF-8' );
 
-        echo '<div id="rk-helper-data" style="display:none" data-regions="' . $locations_json . '"></div>';
+        echo '<div id="rk-check-fields-data" style="display:none" data-regions="' . $locations_json . '"></div>';
     }
 
     /**
@@ -120,6 +120,10 @@ class RK_Checkout_Fields {
 
         // Localize data for frontend
         $data = $this->get_locations_data();
+        
+        // Debug: Log the data
+        error_log('[RK Debug] Locations data: ' . print_r($data, true));
+        
         wp_localize_script( 'rk-checkout', 'rk_check_fields_data', $data );
         // Provide AJAX URL for JS fallback
         wp_localize_script( 'rk-checkout', 'rk_check_fields_ajax', array( 'ajax_url' => admin_url( 'admin-ajax.php' ) ) );
@@ -127,6 +131,9 @@ class RK_Checkout_Fields {
         // Localize plugin options (include all settings for frontend)
         $opts = $this->get_plugin_options();
         wp_localize_script( 'rk-checkout', 'rk_check_fields_options', $opts );
+        
+        // Debug: Add console log for debugging
+        wp_add_inline_script( 'rk-checkout', 'console.log("[RK Debug] Script loaded with data:", window.rk_check_fields_data); console.log("[RK Debug] Options:", window.rk_check_fields_options);' );
     }
 
     /**
