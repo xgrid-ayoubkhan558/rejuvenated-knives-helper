@@ -50,17 +50,18 @@ final class RK_Woo_Ajax_Cart_Count_Admin {
 	}
 
 	public static function menu() {
-		add_options_page(
-			'Xgrid Cart Count',
-			'Xgrid Cart Count',
-			'manage_options',
+		add_submenu_page(
+			'woocommerce',
+			'RK Cart Count',
+			'RK Cart Count',
+			'manage_woocommerce',
 			'rk-woo-ajax-cart-count',
 			array( __CLASS__, 'page' )
 		);
 	}
 
 	public static function page() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
 			return;
 		}
 
@@ -69,7 +70,7 @@ final class RK_Woo_Ajax_Cart_Count_Admin {
 		$minimum_formula = get_option( 'rk_woo_ajax_cart_count_minimum_formula', 'subtotal' );
 
 		echo '<div class="wrap">';
-		echo '<h1>Xgrid Cart Count</h1>';
+		echo '<h1>RK Cart Count</h1>';
 		echo '<p>Use shortcode: <code>[WooAjaxCartCount]</code></p>';
 
 		echo '<form method="post" action="options.php">';
