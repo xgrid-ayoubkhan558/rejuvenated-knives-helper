@@ -139,6 +139,9 @@
                 dropdown.style.display = 'none';
                 message.textContent = '';
                 updateBodyClass(false, null);
+                cityInput.value = '';
+                if (regionInput) regionInput.value = '';
+                if (dateRow) dateRow.style.display = 'none';
                 return;
             }
 
@@ -149,6 +152,7 @@
                 message.textContent = config.messages.mailIn;
                 updateBodyClass(false, 'not-found');
                 cityInput.value = '';
+                if (regionInput) regionInput.value = ''; // <-- CLEAR REGION HERE
                 if (config.enableAutoPayment) selectPaymentMethod(config.paymentNotFound);
                 if (dateRow) dateRow.style.display = 'none';
                 return;
@@ -166,6 +170,7 @@
                 dropdown.appendChild(opt);
             });
         });
+
 
         searchInput.addEventListener('blur', () => {
             setTimeout(() => { dropdown.style.display = 'none'; }, 200);
