@@ -74,23 +74,3 @@
 
 
 
-/* When no city selected - hide all payment methods */
-body.rk-city-not-selected .wc_payment_methods li {}
-
-/* When city NOT found - show only "other_payment" */
-body.rk-city-not-found .wc_payment_methods li {
-    display: none;
-}
-
-body.rk-city-not-found .wc_payment_methods li.payment_method_other_payment {
-    display: block !important;
-}
-
-/* When city found/selected - show only "cod" */
-body.rk-city-selected .wc_payment_methods li {
-    display: none;
-}
-
-body.rk-city-selected .wc_payment_methods li.payment_method_cod {
-    display: block !important;
-}
