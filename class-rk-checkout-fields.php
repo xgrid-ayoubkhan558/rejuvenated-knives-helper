@@ -359,7 +359,7 @@ class RK_Checkout_Fields {
             echo '</select>';
         } else {
             echo '<input type="text" name="rk_cf_options[payment_found]" value="' . esc_attr( $opts['payment_found'] ) . '" class="regular-text" placeholder="e.g., cod" />';
-            echo '<p class="description">' . esc_html__( 'Enter payment method ID (e.g., cod, bacs). Available methods will appear as dropdown if WooCommerce is active.', 'rk-helper' ) . '</p>';
+            echo '<p class="description">' . esc_html__( 'Enter payment method name attribute value, get it from inspecting payment methods HTML. . Available methods will appear as dropdown if WooCommerce is active.', 'rk-helper' ) . '</p>';
         }
         echo '<p class="description">' . esc_html__( 'Payment method to automatically select when a city is found in the service area.', 'rk-helper' ) . '</p>';
     }
@@ -377,7 +377,7 @@ class RK_Checkout_Fields {
             echo '</select>';
         } else {
             echo '<input type="text" name="rk_cf_options[payment_not_found]" value="' . esc_attr( $opts['payment_not_found'] ) . '" class="regular-text" placeholder="e.g., payment_method_other_payment" />';
-            echo '<p class="description">' . esc_html__( 'Enter payment method ID (e.g., cod, bacs). Available methods will appear as dropdown if WooCommerce is active.', 'rk-helper' ) . '</p>';
+            echo '<p class="description">' . esc_html__( 'Enter payment method name attribute value, get it from inspecting payment methods HTML. . Available methods will appear as dropdown if WooCommerce is active.', 'rk-helper' ) . '</p>';
         }
         echo '<p class="description">' . esc_html__( 'Payment method to automatically select when a city is NOT found in the service area.', 'rk-helper' ) . '</p>';
     }

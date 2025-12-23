@@ -58,9 +58,10 @@
     function selectPaymentMethod(id) {
         // Map plugin setting to actual radio value
         let valueToSelect = id;
+        console.log('Selecting payment method:', id);
 
         if (id === 'payment_method_other_payment') {
-            valueToSelect = 'other_payment';
+            valueToSelect = id;
         }
 
         const method = document.querySelector(`input[name="payment_method"][value="${valueToSelect}"]`);
