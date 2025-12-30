@@ -19,14 +19,12 @@
 
     let regionsData = [];
     let cities = [];
+    let hasUserInteracted = false;
 
     const trigger = (el, evt) => {
         if (!el) return;
         el.dispatchEvent(new Event(evt, { bubbles: true, cancelable: true }));
-        // IMPORTANT: WooCommerce requires a .click() to toggle the payment method description boxes
-        if (evt === 'change' && el.name === 'payment_method') {
-            el.click();
-        }
+        if (evt === 'change' && el.name === 'payment_method') el.click();
     };
 
     function buildCitiesList() {
@@ -44,47 +42,58 @@
             try {
                 regionsData = JSON.parse(holder.dataset.regions);
                 buildCitiesList();
-            } catch (e) { console.error('[RK] Data error', e); }
+            } catch (e) {
+                console.error('[RK] Region data error', e);
+            }
         }
     }
 
     function updateBodyClass(hasCity, state = null) {
         if (!config.addBodyClasses) return;
-        document.body.classList.remove('rk-city-selected', 'rk-city-not-selected', 'rk-city-found', 'rk-city-not-found');
+
+        document.body.classList.remove(
+            'rk-city-selected',
+            'rk-city-not-selected',
+            'rk-city-found',
+            'rk-city-not-found'
+        );
+
         document.body.classList.add(hasCity ? 'rk-city-selected' : 'rk-city-not-selected');
         if (state) document.body.classList.add(`rk-city-${state}`);
     }
 
     function selectPaymentMethod(id) {
-        // Map plugin setting to actual radio value
-        let valueToSelect = id;
-        console.log('Selecting payment method:', id);
-
-        if (id === 'payment_method_other_payment') {
-            valueToSelect = id;
-        }
-
-        const method = document.querySelector(`input[name="payment_method"][value="${valueToSelect}"]`);
+        const method = document.querySelector(
+            `input[name="payment_method"][value="${id}"]`
+        );
         if (method) {
             method.checked = true;
             method.dispatchEvent(new Event('change', { bubbles: true }));
         }
     }
 
-
     function initDatePicker(input, region) {
         if (!input || typeof flatpickr === 'undefined') return null;
+
         const enabledDays = [];
         if (region.pickup) {
-            Object.values(region.pickup).forEach((day, i) => { if (day?.enabled) enabledDays.push(i); });
+            Object.values(region.pickup).forEach((day, i) => {
+                if (day?.enabled) enabledDays.push(i);
+            });
         }
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+
         return flatpickr(input, {
             dateFormat: config.dateFormat,
             minDate: new Date(today.getTime() + config.minDaysAdvance * 86400000),
-            maxDate: config.maxDaysAdvance > 0 ? new Date(today.getTime() + config.maxDaysAdvance * 86400000) : null,
-            disable: enabledDays.length ? [date => !enabledDays.includes(date.getDay())] : []
+            maxDate: config.maxDaysAdvance
+                ? new Date(today.getTime() + config.maxDaysAdvance * 86400000)
+                : null,
+            disable: enabledDays.length
+                ? [date => !enabledDays.includes(date.getDay())]
+                : []
         });
     }
 
@@ -120,9 +129,12 @@
             trigger(cityInput, 'change');
             dropdown.style.display = 'none';
             message.textContent = config.messages.citySelected;
+
             updateBodyClass(true, 'selected');
 
-            if (config.enableAutoPayment) selectPaymentMethod(config.paymentFound);
+            if (config.enableAutoPayment) {
+                selectPaymentMethod(config.paymentFound);
+            }
 
             if (dateInput) {
                 if (datePicker) datePicker.destroy();
@@ -132,6 +144,8 @@
         }
 
         searchInput.addEventListener('input', function () {
+            hasUserInteracted = true;
+
             const q = this.value.toLowerCase().trim();
             dropdown.innerHTML = '';
 
@@ -139,21 +153,27 @@
                 dropdown.style.display = 'none';
                 message.textContent = '';
                 updateBodyClass(false, null);
+
                 cityInput.value = '';
                 if (regionInput) regionInput.value = '';
                 if (dateRow) dateRow.style.display = 'none';
                 return;
             }
 
-            const matches = cities.filter(c => `${c.city_name} ${c.region.region_name}`.toLowerCase().includes(q));
+            const matches = cities.filter(c =>
+                `${c.city_name} ${c.region.region_name}`.toLowerCase().includes(q)
+            );
 
             if (!matches.length) {
                 dropdown.style.display = 'none';
                 message.textContent = config.messages.mailIn;
                 updateBodyClass(false, 'not-found');
+
                 cityInput.value = '';
-                if (regionInput) regionInput.value = ''; // <-- CLEAR REGION HERE
-                if (config.enableAutoPayment) selectPaymentMethod(config.paymentNotFound);
+                if (regionInput) regionInput.value = '';
+                if (config.enableAutoPayment) {
+                    selectPaymentMethod(config.paymentNotFound);
+                }
                 if (dateRow) dateRow.style.display = 'none';
                 return;
             }
@@ -171,29 +191,66 @@
             });
         });
 
-
         searchInput.addEventListener('blur', () => {
-            setTimeout(() => { dropdown.style.display = 'none'; }, 200);
+            setTimeout(() => (dropdown.style.display = 'none'), 200);
         });
+        console.log('[RK] City input on init:', cityInput.value);
 
-        // 🔥 FIX FOR PREFILLED DATA
-        // If a city is pre-filled, we check if it's in our service area or not
         const checkInitialState = () => {
-            const currentVal = searchInput.value || cityInput.value;
-            if (currentVal) {
-                const match = cities.find(c => c.city_name.toLowerCase() === currentVal.toLowerCase());
-                if (match) {
-                    selectCity(match);
-                } else {
-                    // It's a pre-filled city but not in our service area
-                    message.textContent = config.messages.mailIn;
-                    updateBodyClass(false, 'not-found');
-                    if (config.enableAutoPayment) selectPaymentMethod(config.paymentNotFound);
+            console.log('[RK] checkInitialState fired');
+            console.log('[RK] searchInput value:', searchInput.value);
+
+            if (hasUserInteracted) return;
+
+            const searchVal = searchInput.value?.trim();
+
+            if (!searchVal) {
+                updateBodyClass(false, null);
+                return;
+            }
+
+            // Try to match using city name inside searchInput
+            const match = cities.find(c =>
+                searchVal.toLowerCase().includes(c.city_name.toLowerCase())
+            );
+
+            if (match) {
+                console.log('[RK] City FOUND on load:', match.city_name);
+
+                // Apply classes ONLY (no clearing, no dropdown logic)
+                updateBodyClass(true, 'found');
+                document.body.classList.add('rk-city-selected');
+
+                message.textContent = config.messages.cityFound;
+
+                // Sync hidden fields (important)
+                cityInput.value = match.city_name;
+                if (regionInput) regionInput.value = match.region.region_name;
+
+                if (config.enableAutoPayment) {
+                    selectPaymentMethod(config.paymentFound);
+                }
+            } else {
+                console.log('[RK] City NOT FOUND on load');
+
+                message.textContent = config.messages.mailIn;
+                updateBodyClass(false, 'not-found');
+
+                if (config.enableAutoPayment) {
+                    selectPaymentMethod(config.paymentNotFound);
                 }
             }
         };
 
+
+
         setTimeout(checkInitialState, 500);
+
+       document.body.addEventListener('updated_checkout', () => {
+            console.log('[RK] updated_checkout event fired');
+            setTimeout(checkInitialState, 300);
+        });
+
     }
 
     function init() {
@@ -201,14 +258,8 @@
         if (regionsData.length) initCitySearch();
     }
 
-    document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', init) : init();
-
-    document.body.addEventListener('updated_checkout', () => {
-        const input = document.getElementById('billing_rk_city_search');
-        if (input && !input.dataset.initialized) {
-            // Re-run prefill check if checkout fragments update
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-    });
+    document.readyState === 'loading'
+        ? document.addEventListener('DOMContentLoaded', init)
+        : init();
 
 })();
