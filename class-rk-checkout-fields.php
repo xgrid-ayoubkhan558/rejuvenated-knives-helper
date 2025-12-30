@@ -598,16 +598,29 @@ class RK_Checkout_Fields {
         if ( ! is_checkout() ) {
             return;
         }
-        
+
         $opts = $this->get_plugin_options();
-        if ( ! empty( $opts['disable_shipping_address'] ) ) {
-            add_filter( 'woocommerce_ship_to_different_address_checked', '__return_false' );
-            add_filter( 'woocommerce_cart_needs_shipping_address', '__return_false' );
-            // Hide the checkbox with CSS
-            add_action( 'wp_head', function() {
-                echo '<style>#ship-to-different-address-checkbox, #ship-to-different-address { display: none !important; }</style>';
-            } );
+
+        if ( empty( $opts['disable_shipping_address'] ) ) {
+            return;
         }
+
+        // Always unchecked
+        add_filter( 'woocommerce_ship_to_different_address_checked', '__return_false' );
+        add_filter( 'woocommerce_order_needs_shipping_address', '__return_false' );
+
+
+
+        // Hide UI
+        add_action( 'wp_head', function () {
+            echo '<style>
+                #ship-to-different-address,
+                #ship-to-different-address-checkbox,
+                .shipping_address {
+                    display: none !important;
+                }
+            </style>';
+        } );
     }
 
     /**
