@@ -124,7 +124,8 @@
         function selectCity(city) {
             searchInput.value = `${city.city_name} (${city.region.region_name})`;
             cityInput.value = city.city_name;
-            if (regionInput) regionInput.value = city.region.region_name;
+            // REMOVED: Auto-population of region field
+            // if (regionInput) regionInput.value = city.region.region_name;
 
             trigger(cityInput, 'change');
             dropdown.style.display = 'none';
@@ -155,7 +156,8 @@
                 updateBodyClass(false, null);
 
                 cityInput.value = '';
-                if (regionInput) regionInput.value = '';
+                // REMOVED: Clearing region field
+                // if (regionInput) regionInput.value = '';
                 if (dateRow) dateRow.style.display = 'none';
                 return;
             }
@@ -170,7 +172,8 @@
                 updateBodyClass(false, 'not-found');
 
                 cityInput.value = '';
-                if (regionInput) regionInput.value = '';
+                // REMOVED: Clearing region field
+                // if (regionInput) regionInput.value = '';
                 if (config.enableAutoPayment) {
                     selectPaymentMethod(config.paymentNotFound);
                 }
@@ -223,9 +226,10 @@
 
                 message.textContent = config.messages.cityFound;
 
-                // Sync hidden fields (important)
+                // Sync hidden city field (important)
                 cityInput.value = match.city_name;
-                if (regionInput) regionInput.value = match.region.region_name;
+                // REMOVED: Syncing region field
+                // if (regionInput) regionInput.value = match.region.region_name;
 
                 if (config.enableAutoPayment) {
                     selectPaymentMethod(config.paymentFound);

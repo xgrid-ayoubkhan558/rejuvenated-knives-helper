@@ -557,25 +557,25 @@ class RK_Checkout_Fields {
             $billing_priority = $fields['billing']['billing_city']['priority'] + 1;
         }
 
+
+        // Visible search input for billing - NOW REQUIRED
+        $fields['billing']['billing_rk_city_search'] = array(
+            'type'     => 'text',
+            'class'    => array( 'form-row-wide' ),
+            'label'    => $opts['city_search_label'],
+            'required' => true,
+            'placeholder' => $opts['city_search_placeholder'],
+            'custom_attributes' => array( 'data-regions' => $locations_json ),
+            'priority' => $billing_priority,
+        );
+        
         // Billing region field - readonly, auto-populated
         $fields['billing']['billing_rk_region'] = array(
             'type'     => 'text',
             'class'    => array( 'form-row-wide', 'rk-region-readonly' ),
             'label'    => $opts['region_label'],
             'required' => false,
-            'readonly' => true,
-            'custom_attributes' => array( 'readonly' => 'readonly' ),
-            'priority' => $billing_priority,
-        );
-
-        // Visible search input for billing
-        $fields['billing']['billing_rk_city_search'] = array(
-            'type'     => 'text',
-            'class'    => array( 'form-row-wide' ),
-            'label'    => $opts['city_search_label'],
-            'required' => false,
-            'placeholder' => $opts['city_search_placeholder'],
-            'custom_attributes' => array( 'data-regions' => $locations_json ),
+            'readonly' => false,
             'priority' => $billing_priority + 1,
         );
 
@@ -646,11 +646,6 @@ class RK_Checkout_Fields {
 
         // City is valid if either hidden field OR search field has value
         $city_valid = ! empty( $city ) || ! empty( $city_search );
-
-        // Only require region if a city is selected
-        if ( ! empty( $city ) && empty( $region ) ) {
-            wc_add_notice( __( 'Please select a city to automatically populate the region.', 'rk-helper' ), 'error' );
-        }
 
         // Require pickup date only when a selected city exists
         if ( ! empty( $city ) ) {
