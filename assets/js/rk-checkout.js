@@ -109,6 +109,7 @@
         const cityInput = document.querySelector('#billing_rk_city');
         const regionInput = document.querySelector('#billing_rk_region');
         const dateInput = document.querySelector('#billing_rk_pickup_date');
+        const serviceTypeInput = document.querySelector('#billing_rk_service_type');
 
         if (!searchInput || !cityInput) return;
 
@@ -140,6 +141,8 @@
 
             updateBodyClass(true, 'selected');
 
+            if (serviceTypeInput) serviceTypeInput.value = 'mail-in';
+
             if (config.enableAutoPayment) {
                 selectPaymentMethod(config.paymentFound);
             }
@@ -166,6 +169,7 @@
                 // REMOVED: Clearing region field
                 // if (regionInput) regionInput.value = '';
                 if (dateRow) dateRow.style.display = 'none';
+                if (serviceTypeInput) serviceTypeInput.value = 'door-to-door';
                 return;
             }
 
@@ -185,12 +189,15 @@
                     selectPaymentMethod(config.paymentNotFound);
                 }
                 if (dateRow) dateRow.style.display = 'none';
+                if (serviceTypeInput) serviceTypeInput.value = 'door-to-door';
                 return;
             }
 
             message.textContent = config.messages.cityFound;
             updateBodyClass(false, 'found');
             dropdown.style.display = 'block';
+
+            if (serviceTypeInput) serviceTypeInput.value = 'mail-in';
 
             matches.forEach(city => {
                 const opt = document.createElement('div');
@@ -247,6 +254,8 @@
                     datePicker = initDatePicker(dateInput, match.region);
                     if (dateRow) dateRow.style.display = '';
                 }
+
+                if (serviceTypeInput) serviceTypeInput.value = 'mail-in';
             } else {
                 console.log('[RK] City NOT FOUND on load');
 
@@ -256,6 +265,8 @@
                 if (config.enableAutoPayment) {
                     selectPaymentMethod(config.paymentNotFound);
                 }
+
+                if (serviceTypeInput) serviceTypeInput.value = 'door-to-door';
             }
         };
 

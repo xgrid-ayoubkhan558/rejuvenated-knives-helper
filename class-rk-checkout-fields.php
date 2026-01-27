@@ -31,8 +31,8 @@ class RK_Checkout_Fields
         // Add fields into checkout billing fields
         add_filter('woocommerce_checkout_fields', array($this, 'checkout_fields'));
 
-        // Add hidden city field manually (after WooCommerce fields)
-        add_action('woocommerce_after_checkout_billing_form', array($this, 'add_hidden_city_field'));
+        // Add hidden city and service type fields manually (after WooCommerce fields)
+        add_action('woocommerce_after_checkout_billing_form', array($this, 'add_hidden_fields'));
 
         // Disable "Ship to a different address" checkbox (if enabled in settings)
         add_action('wp', array($this, 'maybe_disable_shipping_address'));
@@ -72,12 +72,14 @@ class RK_Checkout_Fields
     }
 
     /**
-     * Add hidden city field manually after billing form
-     * This ensures proper field name without billing_ prefix
+     * Add hidden fields manually after billing form
+     * This ensures proper field names without billing_ prefix if desired,
+     * but here we use billing_ prefix to be consistent with WC.
      */
-    public function add_hidden_city_field($checkout)
+    public function add_hidden_fields($checkout)
     {
-        echo '<input type="hidden" class="input-hidden" name="billing_rk_city" id="billing_rk_city" value="" />';
+        echo '<input type="hidden" name="billing_rk_city" id="billing_rk_city" value="" />';
+        echo '<input type="hidden" name="billing_rk_service_type" id="billing_rk_service_type" value="door-to-door" />';
     }
 
     /**
@@ -414,7 +416,7 @@ class RK_Checkout_Fields
     {
         $opts = $this->get_plugin_options();
         $formats = array(
-            'd-m-Y' => 'Month-Day-Year (e.g., 12-25-2024)',
+            'm-d-Y' => 'Month-Day-Year (e.g., 12-25-2024)',
             'd-m-Y' => 'Day-Month-Year (e.g., 25-12-2024)',
             'Y-m-d' => 'Year-Month-Day (e.g., 2024-12-25)',
             'd/m/Y' => 'Day/Month/Year (e.g., 25/12/2024)',
@@ -798,60 +800,58 @@ class RK_Checkout_Fields
         }
     }
 
+
     /**
-     * Save the fields to order meta
+     * Save the fields to order meta - HPOS Compatible
      */
     public function save_order_meta($order_id)
     {
-        $region = '';
-        $city = '';
-
-        // Get region
-        if (isset($_POST['billing_rk_region'])) {
-            $region = sanitize_text_field(wp_unslash($_POST['billing_rk_region']));
+        $order = wc_get_order($order_id);
+        if (!$order) {
+            return;
         }
 
-        // Get city (from hidden field)
-        if (isset($_POST['billing_rk_city'])) {
-            $city = sanitize_text_field(wp_unslash($_POST['billing_rk_city']));
-        }
+        // Get values from POST
+        $region = isset($_POST['billing_rk_region']) ? sanitize_text_field(wp_unslash($_POST['billing_rk_region'])) : '';
+        $city = isset($_POST['billing_rk_city']) ? sanitize_text_field(wp_unslash($_POST['billing_rk_city'])) : '';
+        $service_type = isset($_POST['billing_rk_service_type']) ? sanitize_text_field(wp_unslash($_POST['billing_rk_service_type'])) : '';
+        $pickup_date = isset($_POST['billing_rk_pickup_date']) ? sanitize_text_field(wp_unslash($_POST['billing_rk_pickup_date'])) : '';
 
-        // Save to order meta
-        if ($region !== '') {
-            update_post_meta($order_id, 'rk_region', $region);
-        }
+        // Save using WooCommerce metadata API (Works for HPOS and Post Meta)
+        $order->update_meta_data('rk_region', $region);
+        $order->update_meta_data('rk_city', $city);
+        $order->update_meta_data('rk_service_type', $service_type);
+        $order->update_meta_data('rk_pickup_date', $pickup_date);
 
-        if ($city !== '') {
-            update_post_meta($order_id, 'rk_city', $city);
-        }
-
-        // Pickup date
-        $pickup = '';
-        if (isset($_POST['billing_rk_pickup_date']) && '' !== trim(wp_unslash($_POST['billing_rk_pickup_date']))) {
-            $pickup = sanitize_text_field(wp_unslash($_POST['billing_rk_pickup_date']));
-        }
-
-        if ($pickup !== '') {
-            update_post_meta($order_id, 'rk_pickup_date', $pickup);
-        }
+        // DO NOT call $order->save() here if possible, but since we are in woocommerce_checkout_update_order_meta
+        // and using HPOS, we must save if we want it persisted immediately.
+        // However, if HPOS is NOT used, WC might double-save if we are not careful.
+        // The safest way is to use update_meta_data and save once.
+        $order->save();
     }
+
 
     /**
      * Display in admin order details
      */
     public function display_admin_order_meta($order)
     {
-        $region = get_post_meta($order->get_id(), 'rk_region', true);
-        $city = get_post_meta($order->get_id(), 'rk_city', true);
-        $pickup = get_post_meta($order->get_id(), 'rk_pickup_date', true);
+        $region = $order->get_meta('rk_region');
+        $city = $order->get_meta('rk_city');
+        $pickup = $order->get_meta('rk_pickup_date');
+        $service_type = $order->get_meta('rk_service_type');
 
-        if ($region || $city || $pickup) {
+        if ($region || $city || $pickup || $service_type) {
             if ($region) {
                 echo '<p><strong>' . esc_html__('Region', 'rk-helper') . ':</strong> ' . esc_html($region) . '</p>';
             }
 
             if ($city) {
                 echo '<p><strong>' . esc_html__('City', 'rk-helper') . ':</strong> ' . esc_html($city) . '</p>';
+            }
+
+            if ($service_type) {
+                echo '<p><strong>' . esc_html__('Service Type', 'rk-helper') . ':</strong> ' . esc_html($service_type) . '</p>';
             }
 
             if ($pickup) {
@@ -865,9 +865,10 @@ class RK_Checkout_Fields
      */
     public function email_order_meta_fields($fields, $sent_to_admin, $order)
     {
-        $region = get_post_meta($order->get_id(), 'rk_region', true);
-        $city = get_post_meta($order->get_id(), 'rk_city', true);
-        $pickup = get_post_meta($order->get_id(), 'rk_pickup_date', true);
+        $region = $order->get_meta('rk_region');
+        $city = $order->get_meta('rk_city');
+        $pickup = $order->get_meta('rk_pickup_date');
+        $service_type = $order->get_meta('rk_service_type');
 
         if ($region) {
             $fields['rk_region'] = array(
@@ -880,6 +881,13 @@ class RK_Checkout_Fields
             $fields['rk_city'] = array(
                 'label' => __('City', 'rk-helper'),
                 'value' => $city,
+            );
+        }
+
+        if ($service_type) {
+            $fields['rk_service_type'] = array(
+                'label' => __('Service Type', 'rk-helper'),
+                'value' => $service_type,
             );
         }
 
