@@ -17,6 +17,9 @@
         }
     };
 
+    console.log('[RK Debug] Date format from backend:', opts.date_format);
+    console.log('[RK Debug] Date format being used:', config.dateFormat);
+
     let regionsData = [];
     let cities = [];
     let hasUserInteracted = false;
@@ -85,8 +88,12 @@
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
+        console.log('[RK Debug] Initializing Flatpickr with dateFormat:', config.dateFormat);
+
         return flatpickr(input, {
-            dateFormat: config.dateFormat,
+            // dateFormat: config.dateFormat,
+            dateFormat: "m-d-Y",
+            allowInput: false,
             minDate: new Date(today.getTime() + config.minDaysAdvance * 86400000),
             maxDate: config.maxDaysAdvance
                 ? new Date(today.getTime() + config.maxDaysAdvance * 86400000)
@@ -234,6 +241,12 @@
                 if (config.enableAutoPayment) {
                     selectPaymentMethod(config.paymentFound);
                 }
+
+                if (dateInput) {
+                    if (datePicker) datePicker.destroy();
+                    datePicker = initDatePicker(dateInput, match.region);
+                    if (dateRow) dateRow.style.display = '';
+                }
             } else {
                 console.log('[RK] City NOT FOUND on load');
 
@@ -250,7 +263,7 @@
 
         setTimeout(checkInitialState, 500);
 
-       document.body.addEventListener('updated_checkout', () => {
+        document.body.addEventListener('updated_checkout', () => {
             console.log('[RK] updated_checkout event fired');
             setTimeout(checkInitialState, 300);
         });
