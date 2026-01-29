@@ -58,7 +58,7 @@ $service_type = strtolower(str_replace(array(' ', '-'), '_', trim($service_type_
 if ($service_type): ?>
     <div class="service-type-details">
         <?php
-        if ($service_type === 'door_to_door') {
+        if ($service_type === 'mail_in') {
             ?>
             <p><?php esc_html_e('Thank you for your mail-in sharpening order with Rejuvenated Knives. We’re excited to help restore your knives to peak performance.', 'rk-helper'); ?>
             </p>
@@ -76,7 +76,7 @@ if ($service_type): ?>
                 </li>
             </ul>
             <?php
-        } elseif ($service_type === 'mail_in') {
+        } elseif ($service_type === 'door_to_door') {
             ?>
             <p><?php esc_html_e('Thank you for your order with Rejuvenated Knives. We’re glad to help you get your knives sharpened conveniently from your doorstep!', 'rk-helper'); ?>
             </p>

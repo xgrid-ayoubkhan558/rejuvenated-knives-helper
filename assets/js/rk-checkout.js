@@ -141,7 +141,7 @@
 
             updateBodyClass(true, 'selected');
 
-            if (serviceTypeInput) serviceTypeInput.value = 'mail-in';
+            if (serviceTypeInput) serviceTypeInput.value = 'door-to-door';
 
             if (config.enableAutoPayment) {
                 selectPaymentMethod(config.paymentFound);
@@ -169,7 +169,7 @@
                 // REMOVED: Clearing region field
                 // if (regionInput) regionInput.value = '';
                 if (dateRow) dateRow.style.display = 'none';
-                if (serviceTypeInput) serviceTypeInput.value = 'door-to-door';
+                if (serviceTypeInput) serviceTypeInput.value = 'mail-in';
                 return;
             }
 
@@ -189,7 +189,7 @@
                     selectPaymentMethod(config.paymentNotFound);
                 }
                 if (dateRow) dateRow.style.display = 'none';
-                if (serviceTypeInput) serviceTypeInput.value = 'door-to-door';
+                if (serviceTypeInput) serviceTypeInput.value = 'mail-in';
                 return;
             }
 
@@ -197,7 +197,7 @@
             updateBodyClass(false, 'found');
             dropdown.style.display = 'block';
 
-            if (serviceTypeInput) serviceTypeInput.value = 'mail-in';
+            if (serviceTypeInput) serviceTypeInput.value = 'door-to-door';
 
             matches.forEach(city => {
                 const opt = document.createElement('div');
@@ -255,7 +255,7 @@
                     if (dateRow) dateRow.style.display = '';
                 }
 
-                if (serviceTypeInput) serviceTypeInput.value = 'mail-in';
+                if (serviceTypeInput) serviceTypeInput.value = 'door-to-door';
             } else {
                 console.log('[RK] City NOT FOUND on load');
 
@@ -266,7 +266,7 @@
                     selectPaymentMethod(config.paymentNotFound);
                 }
 
-                if (serviceTypeInput) serviceTypeInput.value = 'door-to-door';
+                if (serviceTypeInput) serviceTypeInput.value = 'mail-in';
             }
         };
 
