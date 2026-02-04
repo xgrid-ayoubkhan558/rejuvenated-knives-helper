@@ -130,7 +130,8 @@
         const dateRow = dateInput?.closest('.form-row');
 
         function selectCity(city) {
-            searchInput.value = `${city.city_name} (${city.region.region_name})`;
+            searchInput.value = `${city.city_name} `;
+            // searchInput.value = `${city.city_name} (${city.region.region_name})`;
             cityInput.value = city.city_name;
             // REMOVED: Auto-population of region field
             // if (regionInput) regionInput.value = city.region.region_name;
