@@ -202,7 +202,8 @@
             matches.forEach(city => {
                 const opt = document.createElement('div');
                 opt.className = 'rk-city-option';
-                opt.textContent = `${city.city_name} (${city.region.region_name})`;
+                opt.textContent = `${city.city_name} `;
+                // opt.textContent = `${city.city_name} (${city.region.region_name})`;
                 opt.onclick = () => selectCity(city);
                 dropdown.appendChild(opt);
             });
