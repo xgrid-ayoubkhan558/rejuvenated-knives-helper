@@ -677,6 +677,7 @@ class RK_Checkout_Fields
         $region = '';
         $city = '';
         $city_search = '';
+        $service_type = isset($_POST['billing_rk_service_type']) ? sanitize_text_field(wp_unslash($_POST['billing_rk_service_type'])) : 'door-to-door';
 
         // Get values from POST
         if (!empty($_POST['billing_rk_region'])) {
@@ -691,15 +692,9 @@ class RK_Checkout_Fields
             $city_search = trim(wp_unslash($_POST['billing_rk_city_search']));
         }
 
-        // City is valid if either hidden field OR search field has value
-        $city_valid = !empty($city) || !empty($city_search);
-
-        // Require pickup date only when a selected city exists
-        if (!empty($city)) {
-            $pickup_date = '';
-            if (!empty($_POST['billing_rk_pickup_date'])) {
-                $pickup_date = wp_unslash($_POST['billing_rk_pickup_date']);
-            }
+        // Require pickup date only for door-to-door service
+        if ($service_type === 'door-to-door') {
+            $pickup_date = !empty($_POST['billing_rk_pickup_date']) ? wp_unslash($_POST['billing_rk_pickup_date']) : '';
             if (empty($pickup_date)) {
                 wc_add_notice(__('Please select a pickup date for your city.', 'rk-helper'), 'error');
             }
@@ -709,8 +704,8 @@ class RK_Checkout_Fields
         $opts = $this->get_plugin_options();
 
         if (!empty($opts['require_city_selection'])) {
-            // Only accept dropdown selection
-            if (empty($city)) {
+            // If selection is required, only allow if service_type reached door-to-door (meaning it was matched)
+            if ($service_type !== 'door-to-door' || empty($city)) {
                 wc_add_notice(__('Please select a city from the dropdown list.', 'rk-helper'), 'error');
             }
         } else {
