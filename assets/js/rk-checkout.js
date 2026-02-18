@@ -161,6 +161,9 @@
             const q = this.value.toLowerCase().trim();
             dropdown.innerHTML = '';
 
+            // Always sync hidden city field with search input as a baseline
+            cityInput.value = this.value.trim();
+
             if (!q) {
                 dropdown.style.display = 'none';
                 message.textContent = '';
@@ -183,7 +186,6 @@
                 message.textContent = config.messages.mailIn;
                 updateBodyClass(false, 'not-found');
 
-                cityInput.value = '';
                 // REMOVED: Clearing region field
                 // if (regionInput) regionInput.value = '';
                 if (config.enableAutoPayment) {
@@ -264,6 +266,9 @@
                 message.textContent = config.messages.mailIn;
                 updateBodyClass(false, 'not-found');
 
+                // Sync hidden city field with search field value even if not found
+                cityInput.value = searchVal;
+
                 if (config.enableAutoPayment) {
                     selectPaymentMethod(config.paymentNotFound);
                 }
@@ -274,7 +279,10 @@
 
 
 
+        searchInput.addEventListener('change', checkInitialState);
+
         setTimeout(checkInitialState, 500);
+        setTimeout(checkInitialState, 2000); // Second check for slow autofill
 
         document.body.addEventListener('updated_checkout', () => {
             console.log('[RK] updated_checkout event fired');

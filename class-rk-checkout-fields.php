@@ -813,7 +813,17 @@ class RK_Checkout_Fields
 
         // Get values from POST
         $region = isset($_POST['billing_rk_region']) ? sanitize_text_field(wp_unslash($_POST['billing_rk_region'])) : '';
-        $city = isset($_POST['billing_rk_city']) ? sanitize_text_field(wp_unslash($_POST['billing_rk_city'])) : '';
+
+        // City fallback logic: check hidden field first, then search field, then standard WC field
+        $city = '';
+        if (!empty($_POST['billing_rk_city'])) {
+            $city = sanitize_text_field(wp_unslash($_POST['billing_rk_city']));
+        } elseif (!empty($_POST['billing_rk_city_search'])) {
+            $city = sanitize_text_field(wp_unslash($_POST['billing_rk_city_search']));
+        } elseif (!empty($_POST['billing_city'])) {
+            $city = sanitize_text_field(wp_unslash($_POST['billing_city']));
+        }
+
         $service_type = isset($_POST['billing_rk_service_type']) ? sanitize_text_field(wp_unslash($_POST['billing_rk_service_type'])) : '';
         $pickup_date = isset($_POST['billing_rk_pickup_date']) ? sanitize_text_field(wp_unslash($_POST['billing_rk_pickup_date'])) : '';
 
@@ -823,10 +833,13 @@ class RK_Checkout_Fields
         $order->update_meta_data('rk_service_type', $service_type);
         $order->update_meta_data('rk_pickup_date', $pickup_date);
 
+        // Sync with standard WooCommerce billing city
+        if (!empty($city)) {
+            $order->set_billing_city($city);
+        }
+
         // DO NOT call $order->save() here if possible, but since we are in woocommerce_checkout_update_order_meta
         // and using HPOS, we must save if we want it persisted immediately.
-        // However, if HPOS is NOT used, WC might double-save if we are not careful.
-        // The safest way is to use update_meta_data and save once.
         $order->save();
     }
 
