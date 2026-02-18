@@ -129,9 +129,12 @@
         let datePicker = null;
         const dateRow = dateInput?.closest('.form-row');
 
-        function selectCity(city) {
-            searchInput.value = `${city.city_name} `;
-            // searchInput.value = `${city.city_name} (${city.region.region_name})`;
+        function selectCity(city, updateSearchInput = true) {
+            if (!city) return;
+
+            if (updateSearchInput) {
+                searchInput.value = `${city.city_name} `;
+            }
             cityInput.value = city.city_name;
             // REMOVED: Auto-population of region field
             // if (regionInput) regionInput.value = city.region.region_name;
@@ -163,6 +166,13 @@
 
             // Always sync hidden city field with search input as a baseline
             cityInput.value = this.value.trim();
+
+            // Auto-select if exact match (and only one such city exists)
+            const exactMatches = cities.filter(c => c.city_name.toLowerCase() === q);
+            if (exactMatches.length === 1) {
+                selectCity(exactMatches[0], false);
+                return;
+            }
 
             if (!q) {
                 dropdown.style.display = 'none';
@@ -231,35 +241,15 @@
             }
 
             // Try to match using city name inside searchInput
-            const match = cities.find(c =>
-                searchVal.toLowerCase().includes(c.city_name.toLowerCase())
-            );
+            const match = cities.find(c => {
+                const cityName = c.city_name.toLowerCase();
+                const sVal = searchVal.toLowerCase();
+                return sVal === cityName || sVal.startsWith(cityName + ',') || sVal.startsWith(cityName + ' ');
+            });
 
             if (match) {
-                console.log('[RK] City FOUND on load:', match.city_name);
-
-                // Apply classes ONLY (no clearing, no dropdown logic)
-                updateBodyClass(true, 'found');
-                document.body.classList.add('rk-city-selected');
-
-                message.textContent = config.messages.cityFound;
-
-                // Sync hidden city field (important)
-                cityInput.value = match.city_name;
-                // REMOVED: Syncing region field
-                // if (regionInput) regionInput.value = match.region.region_name;
-
-                if (config.enableAutoPayment) {
-                    selectPaymentMethod(config.paymentFound);
-                }
-
-                if (dateInput) {
-                    if (datePicker) datePicker.destroy();
-                    datePicker = initDatePicker(dateInput, match.region);
-                    if (dateRow) dateRow.style.display = '';
-                }
-
-                if (serviceTypeInput) serviceTypeInput.value = 'door-to-door';
+                console.log('[RK] City FOUND on load/autofill:', match.city_name);
+                selectCity(match, false);
             } else {
                 console.log('[RK] City NOT FOUND on load');
 
