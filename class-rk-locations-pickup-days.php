@@ -55,13 +55,13 @@ final class RK_Locations_Pickup_Days
         }
 
         $days = array(
-            'sunday' => 'S',
-            'monday' => 'M',
-            'tuesday' => 'T',
-            'wednesday' => 'W',
-            'thursday' => 'T',
-            'friday' => 'F',
-            'saturday' => 'S',
+            'sunday' => 'SUN',
+            'monday' => 'MON',
+            'tuesday' => 'TUE',
+            'wednesday' => 'WED',
+            'thursday' => 'THU',
+            'friday' => 'FRI',
+            'saturday' => 'SAT',
         );
 
         $output = '<div class="rk-pickup-days">';
@@ -73,14 +73,12 @@ final class RK_Locations_Pickup_Days
             if ($enabled) {
                 $output .= '
 					<div class="rk-day-item rk-day-enabled">
-						<span class="rk-day-icon">&#10003;</span>
-						<span class="rk-day-label">' . esc_html($day_label) . '</span>
+						<span class="rk-day-icon">' . esc_html($day_label) . '</span>
 					</div>';
             } else {
                 $output .= '
 					<div class="rk-day-item rk-day-disabled">
-						<span class="rk-day-icon">&#10007;</span>
-						<span class="rk-day-label">' . esc_html($day_label) . '</span>
+						<span class="rk-day-icon">' . esc_html($day_label) . '</span>
 					</div>';
             }
         }
@@ -121,10 +119,10 @@ final class RK_Locations_Pickup_Days
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                width: 24px;
-                height: 24px;
-                border-radius: 50%;
-                font-size: 13px;
+                min-width: 35px;
+                height: 25px;
+                border-radius: 3px;
+                font-size: 12px;
                 font-weight: 700;
                 line-height: 1;
             }
@@ -139,19 +137,12 @@ final class RK_Locations_Pickup_Days
                 color: #b0b0b0;
             }
 
-            .rk-day-label {
-                font-size: 10px;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 0.3px;
+            .rk-day-enabled {
+                background-color: #00a32a;
             }
 
-            .rk-day-enabled .rk-day-label {
-                color: #00a32a;
-            }
-
-            .rk-day-disabled .rk-day-label {
-                color: #b0b0b0;
+            .rk-day-disabled {
+                background-color: #b0b0b0;
             }
         </style>
         <?php
