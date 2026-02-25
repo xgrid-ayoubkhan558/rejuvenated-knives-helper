@@ -55,13 +55,13 @@ final class RK_Locations_Pickup_Days
         }
 
         $days = array(
-            'sunday' => 'Sun',
-            'monday' => 'Mon',
-            'tuesday' => 'Tue',
-            'wednesday' => 'Wed',
-            'thursday' => 'Thu',
-            'friday' => 'Fri',
-            'saturday' => 'Sat',
+            'sunday' => 'S',
+            'monday' => 'M',
+            'tuesday' => 'T',
+            'wednesday' => 'W',
+            'thursday' => 'T',
+            'friday' => 'F',
+            'saturday' => 'S',
         );
 
         $output = '<div class="rk-pickup-days">';
