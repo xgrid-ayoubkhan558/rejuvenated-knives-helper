@@ -86,6 +86,18 @@ final class RK_Woo_Ajax_Cart_Count_Admin
 				'default' => 0,
 			)
 		);
+
+		register_setting(
+			'rk_woo_ajax_cart_count_settings',
+			'rk_enable_cart_sync_logic',
+			array(
+				'type' => 'boolean',
+				'sanitize_callback' => function ($value) {
+					return $value ? 1 : 0;
+				},
+				'default' => 1,
+			)
+		);
 	}
 
 	public static function menu()
@@ -152,6 +164,10 @@ final class RK_Woo_Ajax_Cart_Count_Admin
 		echo '<tr>';
 		echo '<th scope="row">Admin Debug Mode</th>';
 		echo '<td><label><input name="rk_enable_admin_debug" type="checkbox" value="1" ' . checked(1, $enable_debug, false) . ' /> Show Screen ID at the top of admin pages (helpful for debugging hooks)</label></td>';
+		echo '</tr>';
+		echo '<tr>';
+		echo '<th scope="row">Cart Sync Logic</th>';
+		echo '<td><label><input name="rk_enable_cart_sync_logic" type="checkbox" value="1" ' . checked(1, get_option('rk_enable_cart_sync_logic', 1), false) . ' /> Enable frontend cart input/mini-cart synchronization (Bricks compatibility)</label></td>';
 		echo '</tr>';
 		echo '</table>';
 
