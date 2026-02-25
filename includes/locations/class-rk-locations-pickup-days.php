@@ -12,11 +12,6 @@ final class RK_Locations_Pickup_Days
 
     public static function init()
     {
-        // Debug Screen Id (only if debug is enabled in settings)
-        if (get_option('rk_enable_admin_debug', 0)) {
-            add_action('admin_head', array(__CLASS__, 'debug_screen_id'));
-        }
-
         // Only run if feature is enabled
         if (!get_option('rk_enable_advanced_pickup_columns', 1)) {
             return;
