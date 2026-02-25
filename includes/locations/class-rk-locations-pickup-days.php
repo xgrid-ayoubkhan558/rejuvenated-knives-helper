@@ -12,7 +12,7 @@ final class RK_Locations_Pickup_Days
 
     public static function init()
     {
-        // Debug Screen ID (only if debug is enabled in settings)
+        // Debug Screen Id (only if debug is enabled in settings)
         if (get_option('rk_enable_admin_debug', 0)) {
             add_action('admin_head', array(__CLASS__, 'debug_screen_id'));
         }
@@ -105,7 +105,7 @@ final class RK_Locations_Pickup_Days
                 display: flex;
                 flex-wrap: wrap;
                 gap: 6px;
-                min-width: 288px;
+                min-width: 306px;
             }
 
             .rk-day-item {
@@ -120,8 +120,8 @@ final class RK_Locations_Pickup_Days
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                min-width: 35px;
-                height: 25px;
+                min-width: 37px;
+                height: 21px;
                 border-radius: 3px;
                 font-size: 12px;
                 font-weight: 600;

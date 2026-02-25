@@ -14,22 +14,32 @@ if (!defined('ABSPATH')) {
 
 function rk_helper_init()
 {
+    // Define base path
+    $base_path = plugin_dir_path(__FILE__);
+
+    // Load includes
     $includes = array(
-        'class-rk-checkout-fields.php',
-        'class-rk-woo-ajax-cart-count.php',
-        'class-rk-woo-ajax-cart-count-admin.php',
-        'class-rk-locations-pickup-days.php',
-        'class-rk-woo-cart-sync.php',
-        'class-rk-woo-core-tweaks.php',
-        'class-rk-woo-checkout-tweaks.php',
-        'class-rk-woo-phone-tweaks.php',
-        'class-rk-admin-security-tweaks.php',
+        // Admin
+        $base_path . 'includes/admin/class-rk-admin-security-tweaks.php',
+        $base_path . 'includes/admin/class-rk-woo-ajax-cart-count-admin.php',
+
+        // Checkout
+        $base_path . 'includes/checkout/class-rk-checkout-fields.php',
+        $base_path . 'includes/checkout/class-rk-woo-checkout-tweaks.php',
+
+        // Core
+        $base_path . 'includes/core/class-rk-woo-ajax-cart-count.php',
+        $base_path . 'includes/core/class-rk-woo-cart-sync.php',
+        $base_path . 'includes/core/class-rk-woo-core-tweaks.php',
+        $base_path . 'includes/core/class-rk-woo-phone-tweaks.php',
+
+        // Locations
+        $base_path . 'includes/locations/class-rk-locations-pickup-days.php',
     );
 
     foreach ($includes as $file) {
-        $path = plugin_dir_path(__FILE__) . $file;
-        if (file_exists($path)) {
-            require_once $path;
+        if (file_exists($file)) {
+            require_once $file;
         }
     }
 

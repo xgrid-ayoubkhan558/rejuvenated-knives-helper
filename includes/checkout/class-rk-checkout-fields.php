@@ -124,8 +124,8 @@ class RK_Checkout_Fields
         wp_enqueue_script('rk-flatpickr', 'https://cdn.jsdelivr.net/npm/flatpickr', array(), null, true);
 
         // Our checkout CSS & script
-        wp_enqueue_style('rk-checkout-css', plugin_dir_url(__FILE__) . 'assets/css/rk-checkout.css', array(), filemtime(plugin_dir_path(__FILE__) . 'assets/css/rk-checkout.css'));
-        wp_enqueue_script('rk-checkout', plugin_dir_url(__FILE__) . 'assets/js/rk-checkout.js', array('rk-flatpickr', 'jquery'), filemtime(plugin_dir_path(__FILE__) . 'assets/js/rk-checkout.js'), true);
+        wp_enqueue_style('rk-checkout-css', plugin_dir_url(__FILE__) . '../assets/css/rk-checkout.css', array(), filemtime(plugin_dir_path(__FILE__) . '../assets/css/rk-checkout.css'));
+        wp_enqueue_script('rk-checkout', plugin_dir_url(__FILE__) . '../assets/js/rk-checkout.js', array('rk-flatpickr', 'jquery'), filemtime(plugin_dir_path(__FILE__) . '../assets/js/rk-checkout.js'), true);
 
         // Localize data for frontend
         $data = $this->get_locations_data();
@@ -498,37 +498,32 @@ class RK_Checkout_Fields
     public function field_min_days_advance()
     {
         $opts = $this->get_plugin_options();
-        echo '<input type="number" name="rk_cf_options[min_days_advance]" value="' . esc_attr($opts['min_days_advance']) . '" class="small-text" min="0" step="1" />';
-        echo '<p class="description">' . esc_html__('Minimum number of days in advance customers must select a pickup date. Set to 0 to allow same-day pickup.', 'rk-helper') . '</p>';
+        echo '<input type="number" name="rk_cf_options[min_days_advance]" value="' . esc_attr($opts['min_days_advance']) . '" class="small-text" min="0" />';
+        echo '<p class="description">' . esc_html__('Minimum number of days in advance for pickup date selection.', 'rk-helper') . '</p>';
     }
 
     public function field_max_days_advance()
     {
         $opts = $this->get_plugin_options();
-        echo '<input type="number" name="rk_cf_options[max_days_advance]" value="' . esc_attr($opts['max_days_advance']) . '" class="small-text" min="1" step="1" />';
-        echo '<p class="description">' . esc_html__('Maximum number of days in advance customers can select a pickup date.', 'rk-helper') . '</p>';
+        echo '<input type="number" name="rk_cf_options[max_days_advance]" value="' . esc_attr($opts['max_days_advance']) . '" class="small-text" min="1" />';
+        echo '<p class="description">' . esc_html__('Maximum number of days in advance for pickup date selection.', 'rk-helper') . '</p>';
     }
 
+    /**
+     * Settings page output
+     */
     public function settings_page()
     {
         if (!current_user_can('manage_woocommerce')) {
             return;
         }
 
-        // Show success message
-        if (isset($_GET['settings-updated'])) {
-            add_settings_error('rk_cf_messages', 'rk_cf_message', __('Settings saved successfully!', 'rk-helper'), 'success');
-        }
-
-        settings_errors('rk_cf_messages');
         ?>
-        <div class="wrap rk-checkout-fields-settings">
-            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-            <p class="description">
-                <?php esc_html_e('Configure the RK Checkout Fields plugin settings to customize the checkout experience.', 'rk-helper'); ?>
-            </p>
-
-            <form method="post" action="options.php">
+        <div class="wrap">
+            <h1>
+                <?php echo esc_html(get_admin_page_title()); ?>
+            </h1>
+            <form action="options.php" method="post">
                 <?php
                 settings_fields('rk_cf_settings');
                 do_settings_sections('rk-checkout-fields');
@@ -536,104 +531,81 @@ class RK_Checkout_Fields
                 ?>
             </form>
         </div>
-        <style>
-            .rk-checkout-fields-settings .form-table th {
-                width: 250px;
-                padding: 20px 10px 20px 0;
-            }
-
-            .rk-checkout-fields-settings .form-table td {
-                padding: 15px 10px;
-            }
-
-            .rk-checkout-fields-settings .description {
-                color: #646970;
-                font-style: italic;
-                margin-top: 5px;
-            }
-
-            .rk-checkout-fields-settings h2 {
-                margin-top: 30px;
-                padding-bottom: 10px;
-                border-bottom: 1px solid #ddd;
-            }
-
-            .rk-checkout-fields-settings h2:first-of-type {
-                margin-top: 20px;
-            }
-        </style>
         <?php
     }
 
     /**
-     * Default regions (filterable via 'rk_regions_list')
-     *
-     * @return array
-     */
-    public function get_regions()
-    {
-        $regions = array(
-            'north' => __('North', 'rk-helper'),
-            'south' => __('South', 'rk-helper'),
-            'east' => __('East', 'rk-helper'),
-            'west' => __('West', 'rk-helper'),
-        );
-
-        return apply_filters('rk_regions_list', $regions);
-    }
-
-    /**
-     * Add fields to billing section on checkout
+     * Add custom checkout fields
      */
     public function checkout_fields($fields)
     {
-        // Get dynamic labels from settings
         $opts = $this->get_plugin_options();
 
-        // Prepare locations JSON for the frontend
-        $locations = $this->get_locations_data();
-        $locations_json = htmlspecialchars(wp_json_encode($locations), ENT_QUOTES, 'UTF-8');
-
-        // Determine priority for billing fields
-        $billing_priority = 100;
-        if (isset($fields['billing']['billing_phone']['priority'])) {
-            $billing_priority = $fields['billing']['billing_phone']['priority'] + 1;
-        } elseif (isset($fields['billing']['billing_city']['priority'])) {
-            $billing_priority = $fields['billing']['billing_city']['priority'] + 1;
-        }
-
-
-        // Visible search input for billing - NOW REQUIRED
-        $fields['billing']['billing_rk_city_search'] = array(
-            'type' => 'text',
-            'class' => array('form-row-wide'),
-            'label' => $opts['city_search_label'],
+        // Region field
+        $fields['billing']['billing_rk_region'] = array(
+            'label' => $opts['region_label'],
             'required' => true,
-            'placeholder' => $opts['city_search_placeholder'],
-            'custom_attributes' => array('data-regions' => $locations_json),
-            'priority' => $billing_priority,
+            'class' => array('form-row-wide'),
+            'priority' => 40,
+            'type' => 'select',
+            'options' => $this->get_region_options(),
+            'default' => '',
         );
 
-        // Billing region field - readonly, auto-populated
-        $fields['billing']['billing_rk_region'] = array(
+        // City search field
+        $fields['billing']['billing_rk_city_search'] = array(
+            'label' => $opts['city_search_label'],
+            'required' => true,
+            'class' => array('form-row-wide', 'rk-city-search-field'),
+            'priority' => 41,
             'type' => 'text',
-            'class' => array('form-row-wide', 'rk-region-readonly'),
-            'label' => $opts['region_label'],
-            'required' => false,
-            'readonly' => false,
-            'priority' => $billing_priority + 1,
+            'placeholder' => $opts['city_search_placeholder'],
         );
 
         // Pickup date field
         $fields['billing']['billing_rk_pickup_date'] = array(
-            'type' => 'text',
-            'class' => array('form-row-wide'),
             'label' => $opts['pickup_date_label'],
             'required' => false,
-            'priority' => $billing_priority + 3,
+            'class' => array('form-row-wide', 'rk-pickup-date-field'),
+            'priority' => 42,
+            'type' => 'text',
+            'input_class' => array('rk-flatpickr'),
         );
 
+        // If require city selection is enabled
+        if (!empty($opts['require_city_selection'])) {
+            // Mark billing_rk_city as required instead of billing_rk_city_search
+            if (isset($fields['billing']['billing_rk_city'])) {
+                $fields['billing']['billing_rk_city']['required'] = true;
+            }
+            if (isset($fields['billing']['billing_rk_city_search'])) {
+                $fields['billing']['billing_rk_city_search']['required'] = false;
+            }
+        }
+
         return $fields;
+    }
+
+    /**
+     * Get region options for dropdown
+     */
+    private function get_region_options()
+    {
+        $regions = get_terms(array(
+            'taxonomy' => 'locations',
+            'hide_empty' => false,
+            'parent' => 0,
+        ));
+
+        $options = array('' => __('Select a region', 'rk-helper'));
+
+        if (!is_wp_error($regions) && !empty($regions)) {
+            foreach ($regions as $region) {
+                $options[$region->name] = $region->name;
+            }
+        }
+
+        return $options;
     }
 
     /**
@@ -641,242 +613,139 @@ class RK_Checkout_Fields
      */
     public function maybe_disable_shipping_address()
     {
-        if (!is_checkout()) {
-            return;
-        }
-
         $opts = $this->get_plugin_options();
 
-        if (empty($opts['disable_shipping_address'])) {
-            return;
-        }
-
-        // Always unchecked
-        add_filter('woocommerce_ship_to_different_address_checked', '__return_false');
-        add_filter('woocommerce_order_needs_shipping_address', '__return_false');
-
-
-
-        // Hide UI
-        add_action('wp_head', function () {
-            echo '<style>
-                #ship-to-different-address,
-                #ship-to-different-address-checkbox,
-                .shipping_address {
-                    display: none !important;
-                }
-            </style>';
-        });
-    }
-
-    /**
-     * Validate the fields on checkout
-     */
-    public function checkout_validate()
-    {
-        $region = '';
-        $city = '';
-        $city_search = '';
-        $service_type = isset($_POST['billing_rk_service_type']) ? sanitize_text_field(wp_unslash($_POST['billing_rk_service_type'])) : 'door-to-door';
-
-        // Get values from POST
-        if (!empty($_POST['billing_rk_region'])) {
-            $region = wp_unslash($_POST['billing_rk_region']);
-        }
-
-        if (!empty($_POST['billing_rk_city'])) {
-            $city = wp_unslash($_POST['billing_rk_city']);
-        }
-
-        if (!empty($_POST['billing_rk_city_search'])) {
-            $city_search = trim(wp_unslash($_POST['billing_rk_city_search']));
-        }
-
-        // Require pickup date only for door-to-door service
-        if ($service_type === 'door-to-door') {
-            $pickup_date = !empty($_POST['billing_rk_pickup_date']) ? wp_unslash($_POST['billing_rk_pickup_date']) : '';
-            if (empty($pickup_date)) {
-                wc_add_notice(__('Please select a pickup date for your city.', 'rk-helper'), 'error');
-            }
-        }
-
-        // Validate city field
-        $opts = $this->get_plugin_options();
-
-        if (!empty($opts['require_city_selection'])) {
-            // If selection is required, only allow if service_type reached door-to-door (meaning it was matched)
-            if ($service_type !== 'door-to-door' || empty($city)) {
-                wc_add_notice(__('Please select a city from the dropdown list.', 'rk-helper'), 'error');
-            }
-        } else {
-            // Accept either dropdown or manual input
-            if (empty($city) && empty($city_search)) {
-                wc_add_notice(sprintf(__('%s is a required field.', 'rk-helper'), $opts['city_search_label']), 'error');
-            }
+        if (!empty($opts['disable_shipping_address'])) {
+            add_filter('woocommerce_ship_to_different_address_checked', '__return_false');
+            add_filter('woocommerce_checkout_show_shipping_address', '__return_false');
         }
     }
 
     /**
-     * Dynamically modify city search field requirements based on POST data
+     * Modify city search field requirements based on POST data
      */
     public function modify_city_search_requirements($fields)
     {
-        // Only modify during checkout processing
-        $is_checkout = false;
-        if (isset($_POST['woocommerce-process-checkout-nonce'])) {
-            $is_checkout = true;
-        } elseif (defined('DOING_AJAX') && DOING_AJAX && isset($_POST['action']) && $_POST['action'] === 'woocommerce_checkout') {
-            $is_checkout = true;
-        } elseif (isset($_POST['wc_checkout_place_order'])) {
-            $is_checkout = true;
-        }
-
-        if (!$is_checkout) {
-            return $fields;
-        }
-
-        // Check if hidden city field has value (dropdown selection)
-        $city_has_value = false;
-        if (isset($_POST['billing_rk_city']) && '' !== trim($_POST['billing_rk_city'])) {
-            $city_has_value = true;
-        }
-
-        // If city selected from dropdown, make search field not required
-        if ($city_has_value && isset($fields['billing']['billing_rk_city_search'])) {
-            $fields['billing']['billing_rk_city_search']['required'] = false;
+        if (isset($_POST['billing_rk_region']) && !empty($_POST['billing_rk_region'])) {
+            // Region is selected - check if cities are found
+            if (isset($_POST['billing_rk_city']) && !empty($_POST['billing_rk_city'])) {
+                // City found - city search is optional
+                if (isset($fields['billing']['billing_rk_city_search'])) {
+                    $fields['billing']['billing_rk_city_search']['required'] = false;
+                }
+            }
         }
 
         return $fields;
     }
 
     /**
-     * Remove validation notices for city search field if hidden city field has value
+     * Remove validation notices for city search if it has a value
      */
     public function remove_city_search_notices()
     {
-        // Check if hidden city field has value (dropdown selection)
-        $city_has_value = false;
-        if (isset($_POST['billing_rk_city']) && '' !== trim($_POST['billing_rk_city'])) {
-            $city_has_value = true;
+        if (!empty($_POST['billing_rk_city_search'])) {
+            // City search has a value - remove any validation notices
+            wc()->session->set('flash_messages', array());
+        }
+    }
+
+    /**
+     * Checkout validation
+     */
+    public function checkout_validate()
+    {
+        $opts = $this->get_plugin_options();
+
+        // Validate region
+        if (empty($_POST['billing_rk_region'])) {
+            wc_add_notice(__('Please select a region.', 'rk-helper'), 'error');
         }
 
-        // If city selected from dropdown, remove any city search errors
-        if ($city_has_value) {
-            $notices = wc_get_notices('error');
-            if (!empty($notices)) {
-                foreach ($notices as $key => $notice) {
-                    if (is_string($notice)) {
-                        $notice_text = $notice;
-                    } elseif (is_array($notice) && isset($notice['notice'])) {
-                        $notice_text = $notice['notice'];
-                    } else {
-                        continue;
-                    }
-
-                    // Remove notices about city search field
-                    if (
-                        (stripos($notice_text, 'city') !== false && stripos($notice_text, 'search') !== false && stripos($notice_text, 'required') !== false) ||
-                        (stripos($notice_text, 'rk_city_search') !== false && stripos($notice_text, 'required') !== false)
-                    ) {
-                        unset($notices[$key]);
-                    }
-                }
-
-                // Clear and re-add notices
-                wc_clear_notices('error');
-                foreach ($notices as $notice) {
-                    if (is_string($notice)) {
-                        wc_add_notice($notice, 'error');
-                    } elseif (is_array($notice) && isset($notice['notice'])) {
-                        wc_add_notice($notice['notice'], 'error', $notice);
-                    }
-                }
+        // Validate city (either search or dropdown based on settings)
+        if (empty($opts['require_city_selection'])) {
+            if (empty($_POST['billing_rk_city_search']) && empty($_POST['billing_rk_city'])) {
+                wc_add_notice(__('Please search for your city.', 'rk-helper'), 'error');
+            }
+        } else {
+            // Require city selection from dropdown
+            if (empty($_POST['billing_rk_city'])) {
+                wc_add_notice(__('Please select a city from the list.', 'rk-helper'), 'error');
             }
         }
     }
 
-
     /**
-     * Save the fields to order meta - HPOS Compatible
+     * Save order meta
      */
     public function save_order_meta($order_id)
     {
-        $order = wc_get_order($order_id);
-        if (!$order) {
-            return;
+        if (!empty($_POST['billing_rk_region'])) {
+            update_post_meta($order_id, 'rk_region', sanitize_text_field($_POST['billing_rk_region']));
         }
 
-        // Get values from POST
-        $region = isset($_POST['billing_rk_region']) ? sanitize_text_field(wp_unslash($_POST['billing_rk_region'])) : '';
-
-        // City fallback logic: check hidden field first, then search field, then standard WC field
-        $city = '';
         if (!empty($_POST['billing_rk_city'])) {
-            $city = sanitize_text_field(wp_unslash($_POST['billing_rk_city']));
-        } elseif (!empty($_POST['billing_rk_city_search'])) {
-            $city = sanitize_text_field(wp_unslash($_POST['billing_rk_city_search']));
-        } elseif (!empty($_POST['billing_city'])) {
-            $city = sanitize_text_field(wp_unslash($_POST['billing_city']));
+            update_post_meta($order_id, 'rk_city', sanitize_text_field($_POST['billing_rk_city']));
         }
 
-        $service_type = isset($_POST['billing_rk_service_type']) ? sanitize_text_field(wp_unslash($_POST['billing_rk_service_type'])) : '';
-        $pickup_date = isset($_POST['billing_rk_pickup_date']) ? sanitize_text_field(wp_unslash($_POST['billing_rk_pickup_date'])) : '';
-
-        // Save using WooCommerce metadata API (Works for HPOS and Post Meta)
-        $order->update_meta_data('rk_region', $region);
-        $order->update_meta_data('rk_city', $city);
-        $order->update_meta_data('rk_service_type', $service_type);
-        $order->update_meta_data('rk_pickup_date', $pickup_date);
-
-        // Sync with standard WooCommerce billing city
-        if (!empty($city)) {
-            $order->set_billing_city($city);
+        if (!empty($_POST['billing_rk_city_search'])) {
+            update_post_meta($order_id, 'rk_city_search', sanitize_text_field($_POST['billing_rk_city_search']));
         }
 
-        // DO NOT call $order->save() here if possible, but since we are in woocommerce_checkout_update_order_meta
-        // and using HPOS, we must save if we want it persisted immediately.
-        $order->save();
+        if (!empty($_POST['billing_rk_pickup_date'])) {
+            update_post_meta($order_id, 'rk_pickup_date', sanitize_text_field($_POST['billing_rk_pickup_date']));
+        }
+
+        if (!empty($_POST['billing_rk_service_type'])) {
+            update_post_meta($order_id, 'rk_service_type', sanitize_text_field($_POST['billing_rk_service_type']));
+        }
     }
 
-
     /**
-     * Display in admin order details
+     * Display in admin order
      */
     public function display_admin_order_meta($order)
     {
-        $region = $order->get_meta('rk_region');
-        $city = $order->get_meta('rk_city');
-        $pickup = $order->get_meta('rk_pickup_date');
-        $service_type = $order->get_meta('rk_service_type');
+        $region = get_post_meta($order->get_id(), 'rk_region', true);
+        $city = get_post_meta($order->get_id(), 'rk_city', true);
+        $city_search = get_post_meta($order->get_id(), 'rk_city_search', true);
+        $pickup_date = get_post_meta($order->get_id(), 'rk_pickup_date', true);
+        $service_type = get_post_meta($order->get_id(), 'rk_service_type', true);
 
-        if ($region || $city || $pickup || $service_type) {
-            if ($region) {
-                echo '<p><strong>' . esc_html__('Region', 'rk-helper') . ':</strong> ' . esc_html($region) . '</p>';
-            }
+        if ($region) {
+            echo '<p><strong>' . esc_html__('Region', 'rk-helper') . ':</strong> ' . esc_html($region) . '</p>';
+        }
 
-            if ($city) {
-                echo '<p><strong>' . esc_html__('City', 'rk-helper') . ':</strong> ' . esc_html($city) . '</p>';
-            }
+        if ($city) {
+            echo '<p><strong>' . esc_html__('City', 'rk-helper') . ':</strong> ' . esc_html($city) . '</p>';
+        }
 
-            if ($service_type) {
-                echo '<p><strong>' . esc_html__('Service Type', 'rk-helper') . ':</strong> ' . esc_html($service_type) . '</p>';
-            }
+        if ($city_search) {
+            echo '<p><strong>' . esc_html__('City Search', 'rk-helper') . ':</strong> ' . esc_html($city_search) . '</p>';
+        }
 
-            if ($pickup) {
-                echo '<p><strong>' . esc_html__('Pickup date', 'rk-helper') . ':</strong> ' . esc_html($pickup) . '</p>';
-            }
+        if ($pickup_date) {
+            echo '<p><strong>' . esc_html__('Pickup Date', 'rk-helper') . ':</strong> ' . esc_html($pickup_date) . '</p>';
+        }
+
+        if ($service_type) {
+            echo '<p><strong>' . esc_html__('Service Type', 'rk-helper') . ':</strong> ' . esc_html($service_type) . '</p>';
         }
     }
 
     /**
-     * Add to order emails
+     * Add to emails
      */
     public function email_order_meta_fields($fields, $sent_to_admin, $order)
     {
-        $region = $order->get_meta('rk_region');
-        $city = $order->get_meta('rk_city');
-        $pickup = $order->get_meta('rk_pickup_date');
-        $service_type = $order->get_meta('rk_service_type');
+        if (!$order) {
+            return $fields;
+        }
+
+        $region = get_post_meta($order->get_id(), 'rk_region', true);
+        $city = get_post_meta($order->get_id(), 'rk_city', true);
+        $pickup_date = get_post_meta($order->get_id(), 'rk_pickup_date', true);
+        $service_type = get_post_meta($order->get_id(), 'rk_service_type', true);
 
         if ($region) {
             $fields['rk_region'] = array(
@@ -892,6 +761,13 @@ class RK_Checkout_Fields
             );
         }
 
+        if ($pickup_date) {
+            $fields['rk_pickup_date'] = array(
+                'label' => __('Pickup Date', 'rk-helper'),
+                'value' => $pickup_date,
+            );
+        }
+
         if ($service_type) {
             $fields['rk_service_type'] = array(
                 'label' => __('Service Type', 'rk-helper'),
@@ -899,15 +775,6 @@ class RK_Checkout_Fields
             );
         }
 
-        if ($pickup) {
-            $fields['rk_pickup_date'] = array(
-                'label' => __('Pickup date', 'rk-helper'),
-                'value' => $pickup,
-            );
-        }
-
         return $fields;
     }
 }
-
-// new RK_Checkout_Fields();
