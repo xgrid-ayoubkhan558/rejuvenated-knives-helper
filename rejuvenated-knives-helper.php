@@ -3,7 +3,7 @@
  * Plugin Name: Rejuvenated Knives Helper
  * Plugin URI:  https://www.xgrid.co/
  * Description: Custom site logic: Checkout field modifications, dynamic body classes, and conditional checkout rules.
- * Version:     1.0.1
+ * Version:     1.0.2
  * Author:      Ayoub Khan 
  * Text Domain: rk-helper
  */
@@ -20,6 +20,10 @@ function rk_helper_init()
         'class-rk-woo-ajax-cart-count-admin.php',
         'class-rk-locations-pickup-days.php',
         'class-rk-woo-cart-sync.php',
+        'class-rk-woo-core-tweaks.php',
+        'class-rk-woo-checkout-tweaks.php',
+        'class-rk-woo-phone-tweaks.php',
+        'class-rk-admin-security-tweaks.php',
     );
 
     foreach ($includes as $file) {
@@ -29,6 +33,7 @@ function rk_helper_init()
         }
     }
 
+    // Initialize logic classes
     if (class_exists('RK_Checkout_Fields')) {
         new RK_Checkout_Fields();
     }
@@ -47,6 +52,23 @@ function rk_helper_init()
 
     if (class_exists('RK_Woo_Cart_Sync')) {
         RK_Woo_Cart_Sync::init();
+    }
+
+    // New logic classes
+    if (class_exists('RK_Woo_Core_Tweaks')) {
+        RK_Woo_Core_Tweaks::init();
+    }
+
+    if (class_exists('RK_Woo_Checkout_Tweaks')) {
+        RK_Woo_Checkout_Tweaks::init();
+    }
+
+    if (class_exists('RK_Woo_Phone_Tweaks')) {
+        RK_Woo_Phone_Tweaks::init();
+    }
+
+    if (class_exists('RK_Admin_Security_Tweaks')) {
+        RK_Admin_Security_Tweaks::init();
     }
 }
 
