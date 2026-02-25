@@ -105,6 +105,7 @@ final class RK_Locations_Pickup_Days
                 display: flex;
                 flex-wrap: wrap;
                 gap: 6px;
+                min-width: 288px;
             }
 
             .rk-day-item {
@@ -133,8 +134,8 @@ final class RK_Locations_Pickup_Days
             }
 
             .rk-day-disabled .rk-day-icon {
-                background-color: #f0f0f1;
-                color: #b0b0b0;
+                background-color: #e7e7e7;
+                color: #787878;
             }
 
             .rk-day-enabled {
@@ -142,7 +143,7 @@ final class RK_Locations_Pickup_Days
             }
 
             .rk-day-disabled {
-                background-color: #b0b0b0;
+                background-color: #e7e7e7;
             }
         </style>
         <?php
