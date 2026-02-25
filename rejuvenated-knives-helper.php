@@ -19,7 +19,6 @@ function rk_helper_init()
         'class-rk-woo-ajax-cart-count.php',
         'class-rk-woo-ajax-cart-count-admin.php',
         'class-rk-locations-pickup-days.php',
-        'class-rk-pickup-days-settings.php',
     );
 
     foreach ($includes as $file) {
@@ -43,10 +42,6 @@ function rk_helper_init()
 
     if (class_exists('RK_Locations_Pickup_Days')) {
         RK_Locations_Pickup_Days::init();
-    }
-
-    if (class_exists('RK_Pickup_Days_Settings')) {
-        RK_Pickup_Days_Settings::init();
     }
 }
 
