@@ -153,6 +153,10 @@ final class RK_Woo_Ajax_Cart_Count_Admin
 		echo '<th scope="row">Overwrite Cart Quantity</th>';
 		echo '<td><label><input name="rk_overwrite_cart_quantity" type="checkbox" value="1" ' . checked(1, $overwrite_quantity, false) . ' /> Overwrite cart quantity with selected quantity (instead of adding)</label></td>';
 		echo '</tr>';
+		echo '<tr>';
+		echo '<th scope="row">Cart Sync Logic</th>';
+		echo '<td><label><input name="rk_enable_cart_sync_logic" type="checkbox" value="1" ' . checked(1, get_option('rk_enable_cart_sync_logic', 1), false) . ' /> Enable frontend cart input/mini-cart synchronization (Bricks compatibility)</label></td>';
+		echo '</tr>';
 		echo '</table>';
 
 		echo '<h2>Pickup Days Column Settings</h2>';
@@ -164,10 +168,6 @@ final class RK_Woo_Ajax_Cart_Count_Admin
 		echo '<tr>';
 		echo '<th scope="row">Admin Debug Mode</th>';
 		echo '<td><label><input name="rk_enable_admin_debug" type="checkbox" value="1" ' . checked(1, $enable_debug, false) . ' /> Show Screen ID at the top of admin pages (helpful for debugging hooks)</label></td>';
-		echo '</tr>';
-		echo '<tr>';
-		echo '<th scope="row">Cart Sync Logic</th>';
-		echo '<td><label><input name="rk_enable_cart_sync_logic" type="checkbox" value="1" ' . checked(1, get_option('rk_enable_cart_sync_logic', 1), false) . ' /> Enable frontend cart input/mini-cart synchronization (Bricks compatibility)</label></td>';
 		echo '</tr>';
 		echo '</table>';
 
