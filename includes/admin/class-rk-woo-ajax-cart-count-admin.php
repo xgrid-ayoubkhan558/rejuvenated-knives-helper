@@ -51,17 +51,6 @@ final class RK_Woo_Ajax_Cart_Count_Admin
                 )
             );
         }
-
-        // Register the checkout fields options array
-        register_setting(
-            'rk_woo_ajax_cart_count_settings',
-            'rk_cf_options',
-            array(
-                'type' => 'array',
-                'sanitize_callback' => array('RK_Checkout_Fields', 'sanitize_options'),
-                'default' => array(),
-            )
-        );
     }
 
     public static function menu()
@@ -256,108 +245,6 @@ final class RK_Woo_Ajax_Cart_Count_Admin
                     </tr>
                 </table>
 
-                <h2 class="title">City Search & Payment Logic</h2>
-                <p>Configure how city search affects payment methods and order requirements.</p>
-                <table class="form-table" role="presentation">
-                    <tr>
-                        <th scope="row">Payment Method Found</th>
-                        <td>
-                            <select name="rk_cf_options[payment_found]">
-                                <?php foreach (RK_Checkout_Fields::get_payment_methods() as $id => $title): ?>
-                                    <option value="<?php echo esc_attr($id); ?>" <?php selected($id, $options['rk_cf_options']['payment_found']); ?>>
-                                        <?php echo esc_html($title); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <p class="description">Payment method to auto-select when a door-to-door city is found.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Payment Method Not Found</th>
-                        <td>
-                            <select name="rk_cf_options[payment_not_found]">
-                                <?php foreach (RK_Checkout_Fields::get_payment_methods() as $id => $title): ?>
-                                    <option value="<?php echo esc_attr($id); ?>" <?php selected($id, $options['rk_cf_options']['payment_not_found']); ?>>
-                                        <?php echo esc_html($title); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <p class="description">Payment method to auto-select for mail-in orders.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Validation</th>
-                        <td>
-                            <label>
-                                <input name="rk_cf_options[require_city_selection]" type="checkbox" value="1" <?php checked(1, $options['rk_cf_options']['require_city_selection']); ?> />
-                                Require a specific city selection to place order
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">City Selection Message</th>
-                        <td>
-                            <textarea name="rk_cf_options[city_selected_message]" rows="4"
-                                class="large-text"><?php echo esc_textarea($options['rk_cf_options']['city_selected_message']); ?></textarea>
-                            <p class="description">Message shown when a door-to-door city is selected.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Mail-in Message</th>
-                        <td>
-                            <textarea name="rk_cf_options[mailin_message]" rows="4"
-                                class="large-text"><?php echo esc_textarea($options['rk_cf_options']['mailin_message']); ?></textarea>
-                            <p class="description">Message shown when no matching city is found.</p>
-                        </td>
-                    </tr>
-                </table>
-
-                <h2 class="title">Field Labels & Formatting</h2>
-                <table class="form-table" role="presentation">
-                    <tr>
-                        <th scope="row"><label for="rk_cf_date_format">Date Format</label></th>
-                        <td>
-                            <input name="rk_cf_options[date_format]" id="rk_cf_date_format" type="text"
-                                value="<?php echo esc_attr($options['rk_cf_options']['date_format']); ?>"
-                                class="regular-text" />
-                            <p class="description">PHP date format (e.g. d-m-Y)</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="rk_cf_region_label">Region Label</label></th>
-                        <td>
-                            <input name="rk_cf_options[region_label]" id="rk_cf_region_label" type="text"
-                                value="<?php echo esc_attr($options['rk_cf_options']['region_label']); ?>"
-                                class="regular-text" />
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="rk_cf_city_search_label">City Search Label</label></th>
-                        <td>
-                            <input name="rk_cf_options[city_search_label]" id="rk_cf_city_search_label" type="text"
-                                value="<?php echo esc_attr($options['rk_cf_options']['city_search_label']); ?>"
-                                class="regular-text" />
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="rk_cf_pickup_date_label">Pickup Date Label</label></th>
-                        <td>
-                            <input name="rk_cf_options[pickup_date_label]" id="rk_cf_pickup_date_label" type="text"
-                                value="<?php echo esc_attr($options['rk_cf_options']['pickup_date_label']); ?>"
-                                class="regular-text" />
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Shipping Toggle</th>
-                        <td>
-                            <label>
-                                <input name="rk_cf_options[disable_shipping_address]" type="checkbox" value="1" <?php checked(1, $options['rk_cf_options']['disable_shipping_address']); ?> />
-                                Force disable "Ship to different address"
-                            </label>
-                        </td>
-                    </tr>
-                </table>
-
                 <?php submit_button(); ?>
             </form>
         </div>
@@ -393,9 +280,6 @@ final class RK_Woo_Ajax_Cart_Count_Admin
         foreach ($option_keys as $key => $slug) {
             $options[$key] = get_option($slug, ($key === 'pickup_columns' || $key === 'cart_sync' ? 1 : 0));
         }
-
-        // Add the checkout fields options
-        $options['rk_cf_options'] = RK_Checkout_Fields::get_plugin_options();
 
         return $options;
     }
