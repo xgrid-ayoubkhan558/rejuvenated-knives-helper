@@ -124,6 +124,7 @@ final class RK_Locations_Pickup_Days
                 height: 25px;
                 border-radius: 3px;
                 font-size: 12px;
+                font-weight: 600;
                 line-height: 1;
             }
 
