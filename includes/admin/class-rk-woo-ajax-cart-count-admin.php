@@ -84,6 +84,7 @@ final class RK_Woo_Ajax_Cart_Count_Admin
         $out['city_search_placeholder'] = sanitize_text_field($input['city_search_placeholder'] ?: $defaults['city_search_placeholder']);
         $out['disable_shipping_address'] = !empty($input['disable_shipping_address']) ? 1 : 0;
         $out['require_city_selection'] = !empty($input['require_city_selection']) ? 1 : 0;
+        $out['pickup_logic'] = sanitize_text_field($input['pickup_logic'] ?: $defaults['pickup_logic']);
         $out['min_days_advance'] = absint($input['min_days_advance'] ?? $defaults['min_days_advance']);
         $out['max_days_advance'] = absint($input['max_days_advance'] ?? $defaults['max_days_advance']);
         return $out;
@@ -307,6 +308,19 @@ final class RK_Woo_Ajax_Cart_Count_Admin
                             </td>
                         </tr>
                         <tr>
+                            <th scope="row">Pickup Date Logic</th>
+                            <td>
+                                <select name="rk_cf_options[pickup_logic]" class="regular-text">
+                                    <option value="region" <?php selected($cf_options['pickup_logic'], 'region'); ?>>Use Region
+                                        Settings</option>
+                                    <option value="city" <?php selected($cf_options['pickup_logic'], 'city'); ?>>Use City
+                                        Settings</option>
+                                </select>
+                                <p class="description">Choose whether to use pickup date settings from the Region or specific
+                                    City.</p>
+                            </td>
+                        </tr>
+                        <tr>
                             <th scope="row">Disable Shipping Address</th>
                             <td>
                                 <label><input type="checkbox" name="rk_cf_options[disable_shipping_address]" value="1" <?php checked(1, $cf_options['disable_shipping_address']); ?> /> Hide "Ship to a different
@@ -503,6 +517,7 @@ final class RK_Woo_Ajax_Cart_Count_Admin
             'city_search_placeholder' => 'Search your city',
             'disable_shipping_address' => 1,
             'require_city_selection' => 0,
+            'pickup_logic' => 'region',
             'min_days_advance' => 0,
             'max_days_advance' => 90,
         );
