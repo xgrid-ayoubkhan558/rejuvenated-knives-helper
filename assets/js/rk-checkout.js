@@ -80,8 +80,13 @@
 
         const enabledDays = [];
         if (region.pickup) {
-            Object.values(region.pickup).forEach((day, i) => {
-                if (day?.enabled) enabledDays.push(i);
+            const dayMap = { 'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4, 'friday': 5, 'saturday': 6 };
+            Object.keys(region.pickup).forEach(dayKey => {
+                const dayData = region.pickup[dayKey];
+                const dayIndex = dayMap[dayKey.toLowerCase()];
+                if (dayData?.enabled && typeof dayIndex !== 'undefined') {
+                    enabledDays.push(dayIndex);
+                }
             });
         }
 
