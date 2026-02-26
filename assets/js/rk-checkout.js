@@ -75,17 +75,33 @@
         }
     }
 
-    function initDatePicker(input, region) {
+    function initDatePicker(input, cityOrRegion, isCity = false) {
         if (!input || typeof flatpickr === 'undefined') return null;
 
-        console.log('[RK Debug] Initializing date picker for region:', region.region_name);
-        console.log('[RK Debug] Raw pickup data:', region.pickup);
+        const pickupLogic = (window.rk_check_fields_options || {}).pickup_logic || 'region';
+        console.log('[RK Debug] Initializing date picker. Logic:', pickupLogic, 'Is City Data:', isCity);
+
+        // Determine which pickup data to use
+        let pickupData = cityOrRegion.pickup;
+
+        // If we are passed a city, we might still want region data if logic is 'region'
+        if (isCity) {
+            if (pickupLogic === 'region') {
+                console.log('[RK Debug] Logic is region, using region pickup data');
+                pickupData = cityOrRegion.region.pickup;
+            } else {
+                console.log('[RK Debug] Logic is city, using city pickup data');
+                pickupData = cityOrRegion.pickup;
+            }
+        }
+
+        console.log('[RK Debug] Pickup data being used:', pickupData);
 
         const enabledDays = [];
-        if (region.pickup) {
+        if (pickupData) {
             const dayMap = { 'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4, 'friday': 5, 'saturday': 6 };
-            Object.keys(region.pickup).forEach(dayKey => {
-                const dayData = region.pickup[dayKey];
+            Object.keys(pickupData).forEach(dayKey => {
+                const dayData = pickupData[dayKey];
                 const dayIndex = dayMap[dayKey.toLowerCase()];
                 if (dayData?.enabled && typeof dayIndex !== 'undefined') {
                     enabledDays.push(dayIndex);
@@ -98,10 +114,7 @@
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        console.log('[RK Debug] Initializing Flatpickr with dateFormat:', config.dateFormat);
-
         return flatpickr(input, {
-            // dateFormat: config.dateFormat,
             dateFormat: "m-d-Y",
             allowInput: false,
             minDate: new Date(today.getTime() + config.minDaysAdvance * 86400000),
@@ -163,7 +176,7 @@
 
             if (dateInput) {
                 if (datePicker) datePicker.destroy();
-                datePicker = initDatePicker(dateInput, city.region);
+                datePicker = initDatePicker(dateInput, city, true);
                 if (dateRow) dateRow.style.display = '';
             }
         }

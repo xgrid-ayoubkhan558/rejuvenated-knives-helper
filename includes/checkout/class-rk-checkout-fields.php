@@ -200,6 +200,8 @@ class RK_Checkout_Fields
                     );
                 }
             }
+            $regionData['pickup_logic'] = $this->get_plugin_options()['pickup_logic'];
+
             // Cities (children of region)
             $cities = get_terms(array(
                 'taxonomy' => 'locations',
@@ -209,10 +211,31 @@ class RK_Checkout_Fields
 
             if (!is_wp_error($cities) && !empty($cities)) {
                 foreach ($cities as $city) {
-                    $regionData['cities'][] = array(
+                    $cityData = array(
                         'city_name' => $city->name,
                         'city_id' => $city->term_id,
+                        'pickup' => array(),
                     );
+
+                    // Fetch city-level pickup settings
+                    $days = array('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
+                    foreach ($days as $day) {
+                        if (function_exists('get_field')) {
+                            $cityData['pickup'][$day] = array(
+                                'enabled' => (bool) get_field("region_pickup_{$day}_enabled", 'term_' . $city->term_id),
+                                'start' => get_field("region_pickup_{$day}_start_time", 'term_' . $city->term_id),
+                                'end' => get_field("region_pickup_{$day}_end_time", 'term_' . $city->term_id),
+                            );
+                        } else {
+                            $cityData['pickup'][$day] = array(
+                                'enabled' => (bool) get_term_meta($city->term_id, "region_pickup_{$day}_enabled", true),
+                                'start' => get_term_meta($city->term_id, "region_pickup_{$day}_start_time", true),
+                                'end' => get_term_meta($city->term_id, "region_pickup_{$day}_end_time", true),
+                            );
+                        }
+                    }
+
+                    $regionData['cities'][] = $cityData;
                 }
             }
 
@@ -247,7 +270,7 @@ class RK_Checkout_Fields
         add_settings_field('add_body_classes', __('Add body classes', 'rk-helper'), array($this, 'field_add_body_classes'), 'rk-checkout-fields', 'rk_cf_display');
         add_settings_field('date_format', __('Date picker format', 'rk-helper'), array($this, 'field_date_format'), 'rk-checkout-fields', 'rk_cf_display');
         add_settings_field('disable_shipping_address', __('Disable shipping address', 'rk-helper'), array($this, 'field_disable_shipping_address'), 'rk-checkout-fields', 'rk_cf_display');
-        add_settings_field('require_city_selection', __('Require city selection from dropdown', 'rk-helper'), array($this, 'field_require_city_selection'), 'rk-checkout-fields', 'rk_cf_display');
+        add_settings_field('pickup_logic', __('Pickup date logic', 'rk-helper'), array($this, 'field_pickup_logic'), 'rk-checkout-fields', 'rk_cf_display');
         add_settings_field('min_days_advance', __('Minimum days in advance for pickup', 'rk-helper'), array($this, 'field_min_days_advance'), 'rk-checkout-fields', 'rk_cf_display');
         add_settings_field('max_days_advance', __('Maximum days in advance for pickup', 'rk-helper'), array($this, 'field_max_days_advance'), 'rk-checkout-fields', 'rk_cf_display');
 
@@ -305,6 +328,7 @@ class RK_Checkout_Fields
         $out['city_search_placeholder'] = sanitize_text_field($input['city_search_placeholder'] ?: $defaults['city_search_placeholder']);
         $out['disable_shipping_address'] = !empty($input['disable_shipping_address']) ? 1 : 0;
         $out['require_city_selection'] = !empty($input['require_city_selection']) ? 1 : 0;
+        $out['pickup_logic'] = sanitize_text_field($input['pickup_logic'] ?: $defaults['pickup_logic']);
         $out['min_days_advance'] = absint($input['min_days_advance'] ?? $defaults['min_days_advance']);
         $out['max_days_advance'] = absint($input['max_days_advance'] ?? $defaults['max_days_advance']);
         return $out;
@@ -327,6 +351,7 @@ class RK_Checkout_Fields
             'city_search_placeholder' => __('Search your city', 'rk-helper'),
             'disable_shipping_address' => 1,
             'require_city_selection' => 0,
+            'pickup_logic' => 'region',
             'min_days_advance' => 0,
             'max_days_advance' => 90,
         );
@@ -482,6 +507,22 @@ class RK_Checkout_Fields
         $opts = $this->get_plugin_options();
         echo '<label><input type="checkbox" name="rk_cf_options[disable_shipping_address]" value="1" ' . checked(1, $opts['disable_shipping_address'], false) . ' /> ' . esc_html__('Hide "Ship to a different address" checkbox', 'rk-helper') . '</label>';
         echo '<p class="description">' . esc_html__('When enabled, the shipping address section will be hidden and customers can only use billing address.', 'rk-helper') . '</p>';
+    }
+
+    public function field_pickup_logic()
+    {
+        $opts = $this->get_plugin_options();
+        $options = array(
+            'region' => __('Use Region Settings', 'rk-helper'),
+            'city' => __('Use City Settings', 'rk-helper'),
+        );
+
+        echo '<select name="rk_cf_options[pickup_logic]" class="regular-text">';
+        foreach ($options as $val => $label) {
+            echo '<option value="' . esc_attr($val) . '" ' . selected($opts['pickup_logic'], $val, false) . '>' . esc_html($label) . '</option>';
+        }
+        echo '</select>';
+        echo '<p class="description">' . esc_html__('Choose whether to use pickup date settings from the Region or specific City.', 'rk-helper') . '</p>';
     }
 
     public function field_require_city_selection()
