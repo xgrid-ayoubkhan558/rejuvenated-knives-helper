@@ -167,141 +167,137 @@
                 if (dateRow) dateRow.style.display = '';
             }
         }
-        datePicker = initDatePicker(dateInput, city.region);
-        if (dateRow) dateRow.style.display = '';
+
+        searchInput.addEventListener('input', function () {
+            hasUserInteracted = true;
+
+            const q = this.value.toLowerCase().trim();
+            dropdown.innerHTML = '';
+
+            // Always sync hidden city field with search input as a baseline
+            cityInput.value = this.value.trim();
+
+            // Auto-select if exact match (and only one such city exists)
+            const exactMatches = cities.filter(c => c.city_name.toLowerCase() === q);
+            if (exactMatches.length === 1) {
+                selectCity(exactMatches[0], false);
+                return;
+            }
+
+            if (!q) {
+                dropdown.style.display = 'none';
+                message.textContent = '';
+                updateBodyClass(false, null);
+
+                cityInput.value = '';
+                // REMOVED: Clearing region field
+                // if (regionInput) regionInput.value = '';
+                if (dateRow) dateRow.style.display = 'none';
+                if (serviceTypeInput) serviceTypeInput.value = 'mail-in';
+                return;
+            }
+
+            const matches = cities.filter(c =>
+                `${c.city_name} ${c.region.region_name}`.toLowerCase().includes(q)
+            );
+
+            if (!matches.length) {
+                dropdown.style.display = 'none';
+                message.textContent = config.messages.mailIn;
+                updateBodyClass(false, 'not-found');
+
+                // REMOVED: Clearing region field
+                // if (regionInput) regionInput.value = '';
+                if (config.enableAutoPayment) {
+                    selectPaymentMethod(config.paymentNotFound);
+                }
+                if (dateRow) dateRow.style.display = 'none';
+                if (serviceTypeInput) serviceTypeInput.value = 'mail-in';
+                return;
+            }
+
+            message.textContent = config.messages.cityFound;
+            updateBodyClass(false, 'found');
+            dropdown.style.display = 'block';
+
+            if (serviceTypeInput) serviceTypeInput.value = 'door-to-door';
+
+            matches.forEach(city => {
+                const opt = document.createElement('div');
+                opt.className = 'rk-city-option';
+                opt.textContent = `${city.city_name} `;
+                // opt.textContent = `${city.city_name} (${city.region.region_name})`;
+                opt.onclick = () => selectCity(city);
+                dropdown.appendChild(opt);
+            });
+        });
+
+        searchInput.addEventListener('blur', () => {
+            setTimeout(() => (dropdown.style.display = 'none'), 200);
+        });
+        console.log('[RK] City input on init:', cityInput.value);
+
+        const checkInitialState = () => {
+            console.log('[RK] checkInitialState fired');
+            console.log('[RK] searchInput value:', searchInput.value);
+
+            if (hasUserInteracted) return;
+
+            const searchVal = searchInput.value?.trim();
+
+            if (!searchVal) {
+                updateBodyClass(false, null);
+                return;
+            }
+
+            // Try to match using city name inside searchInput
+            const match = cities.find(c => {
+                const cityName = c.city_name.toLowerCase();
+                const sVal = searchVal.toLowerCase();
+                return sVal === cityName || sVal.startsWith(cityName + ',') || sVal.startsWith(cityName + ' ');
+            });
+
+            if (match) {
+                console.log('[RK] City FOUND on load/autofill:', match.city_name);
+                selectCity(match, false);
+            } else {
+                console.log('[RK] City NOT FOUND on load');
+
+                message.textContent = config.messages.mailIn;
+                updateBodyClass(false, 'not-found');
+
+                // Sync hidden city field with search field value even if not found
+                cityInput.value = searchVal;
+
+                if (config.enableAutoPayment) {
+                    selectPaymentMethod(config.paymentNotFound);
+                }
+
+                if (serviceTypeInput) serviceTypeInput.value = 'mail-in';
+            }
+        };
+
+
+
+        searchInput.addEventListener('change', checkInitialState);
+
+        setTimeout(checkInitialState, 500);
+        setTimeout(checkInitialState, 2000); // Second check for slow autofill
+
+        document.body.addEventListener('updated_checkout', () => {
+            console.log('[RK] updated_checkout event fired');
+            setTimeout(checkInitialState, 300);
+        });
+
     }
-}
 
-    searchInput.addEventListener('input', function () {
-    hasUserInteracted = true;
-
-    const q = this.value.toLowerCase().trim();
-    dropdown.innerHTML = '';
-
-    // Always sync hidden city field with search input as a baseline
-    cityInput.value = this.value.trim();
-
-    // Auto-select if exact match (and only one such city exists)
-    const exactMatches = cities.filter(c => c.city_name.toLowerCase() === q);
-    if (exactMatches.length === 1) {
-        selectCity(exactMatches[0], false);
-        return;
+    function init() {
+        loadData();
+        if (regionsData.length) initCitySearch();
     }
 
-    if (!q) {
-        dropdown.style.display = 'none';
-        message.textContent = '';
-        updateBodyClass(false, null);
+    document.readyState === 'loading'
+        ? document.addEventListener('DOMContentLoaded', init)
+        : init();
 
-        cityInput.value = '';
-        // REMOVED: Clearing region field
-        // if (regionInput) regionInput.value = '';
-        if (dateRow) dateRow.style.display = 'none';
-        if (serviceTypeInput) serviceTypeInput.value = 'mail-in';
-        return;
-    }
-
-    const matches = cities.filter(c =>
-        `${c.city_name} ${c.region.region_name}`.toLowerCase().includes(q)
-    );
-
-    if (!matches.length) {
-        dropdown.style.display = 'none';
-        message.textContent = config.messages.mailIn;
-        updateBodyClass(false, 'not-found');
-
-        // REMOVED: Clearing region field
-        // if (regionInput) regionInput.value = '';
-        if (config.enableAutoPayment) {
-            selectPaymentMethod(config.paymentNotFound);
-        }
-        if (dateRow) dateRow.style.display = 'none';
-        if (serviceTypeInput) serviceTypeInput.value = 'mail-in';
-        return;
-    }
-
-    message.textContent = config.messages.cityFound;
-    updateBodyClass(false, 'found');
-    dropdown.style.display = 'block';
-
-    if (serviceTypeInput) serviceTypeInput.value = 'door-to-door';
-
-    matches.forEach(city => {
-        const opt = document.createElement('div');
-        opt.className = 'rk-city-option';
-        opt.textContent = `${city.city_name} `;
-        // opt.textContent = `${city.city_name} (${city.region.region_name})`;
-        opt.onclick = () => selectCity(city);
-        dropdown.appendChild(opt);
-    });
-});
-
-searchInput.addEventListener('blur', () => {
-    setTimeout(() => (dropdown.style.display = 'none'), 200);
-});
-console.log('[RK] City input on init:', cityInput.value);
-
-const checkInitialState = () => {
-    console.log('[RK] checkInitialState fired');
-    console.log('[RK] searchInput value:', searchInput.value);
-
-    if (hasUserInteracted) return;
-
-    const searchVal = searchInput.value?.trim();
-
-    if (!searchVal) {
-        updateBodyClass(false, null);
-        return;
-    }
-
-    // Try to match using city name inside searchInput
-    const match = cities.find(c => {
-        const cityName = c.city_name.toLowerCase();
-        const sVal = searchVal.toLowerCase();
-        return sVal === cityName || sVal.startsWith(cityName + ',') || sVal.startsWith(cityName + ' ');
-    });
-
-    if (match) {
-        console.log('[RK] City FOUND on load/autofill:', match.city_name);
-        selectCity(match, false);
-    } else {
-        console.log('[RK] City NOT FOUND on load');
-
-        message.textContent = config.messages.mailIn;
-        updateBodyClass(false, 'not-found');
-
-        // Sync hidden city field with search field value even if not found
-        cityInput.value = searchVal;
-
-        if (config.enableAutoPayment) {
-            selectPaymentMethod(config.paymentNotFound);
-        }
-
-        if (serviceTypeInput) serviceTypeInput.value = 'mail-in';
-    }
-};
-
-
-
-searchInput.addEventListener('change', checkInitialState);
-
-setTimeout(checkInitialState, 500);
-setTimeout(checkInitialState, 2000); // Second check for slow autofill
-
-document.body.addEventListener('updated_checkout', () => {
-    console.log('[RK] updated_checkout event fired');
-    setTimeout(checkInitialState, 300);
-});
-
-}
-
-function init() {
-    loadData();
-    if (regionsData.length) initCitySearch();
-}
-
-document.readyState === 'loading'
-    ? document.addEventListener('DOMContentLoaded', init)
-    : init();
-
-}) ();
+})();
