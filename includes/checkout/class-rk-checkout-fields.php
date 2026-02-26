@@ -65,9 +65,9 @@ class RK_Checkout_Fields
         add_action('wp_ajax_nopriv_rk_get_locations', array($this, 'ajax_get_locations'));
         add_action('wp_ajax_rk_get_locations', array($this, 'ajax_get_locations'));
 
-        // Admin settings
-        add_action('admin_menu', array($this, 'add_admin_menu'));
-        add_action('admin_init', array($this, 'register_settings'));
+        // Admin settings are now consolidated in RK_Woo_Ajax_Cart_Count_Admin
+        // add_action('admin_menu', array($this, 'add_admin_menu'));
+        // add_action('admin_init', array($this, 'register_settings'));
 
     }
 
