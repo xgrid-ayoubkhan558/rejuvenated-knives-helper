@@ -177,32 +177,31 @@ class RK_Checkout_Fields
 
             // Try to read ACF fields if available, fallback to term meta
             if (function_exists('get_field')) {
-                $regionData['region_id'] = get_field('region_id', $region) ?: $region->term_id;
-                $regionData['region_delivery_days'] = get_field('region_delivery_days', $region) ?: array();
+                $regionData['region_id'] = get_field('region_id', 'term_' . $region->term_id) ?: $region->term_id;
+                $regionData['region_delivery_days'] = get_field('field_region_delivery_days', 'term_' . $region->term_id) ?: array();
 
                 $days = array('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
                 foreach ($days as $day) {
                     $regionData['pickup'][$day] = array(
-                        'enabled' => (bool) get_field("region_pickup_{$day}_enabled", $region),
-                        'start' => get_field("region_pickup_{$day}_start_time", $region),
-                        'end' => get_field("region_pickup_{$day}_end_time", $region),
+                        'enabled' => (bool) get_field("field_pickup_{$day}_enabled", 'term_' . $region->term_id),
+                        'start' => get_field("field_pickup_{$day}_start", 'term_' . $region->term_id),
+                        'end' => get_field("field_pickup_{$day}_end", 'term_' . $region->term_id),
                     );
                 }
             } else {
                 // fallback: read term meta fields
+                $region_meta_prefix = ''; // Adjust if ACF prefixing is different in DB
                 $regionData['region_id'] = get_term_meta($region->term_id, 'region_id', true) ?: $region->term_id;
-                $regionData['region_delivery_days'] = get_term_meta($region->term_id, 'region_delivery_days', true) ?: array();
+                $regionData['region_delivery_days'] = get_term_meta($region->term_id, 'field_region_delivery_days', true) ?: array();
 
                 $days = array('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
                 foreach ($days as $day) {
                     $regionData['pickup'][$day] = array(
-                        'enabled' => (bool) get_term_meta($region->term_id, "region_pickup_{$day}_enabled", true),
-                        'start' => get_term_meta($region->term_id, "region_pickup_{$day}_start_time", true),
-                        'end' => get_term_meta($region->term_id, "region_pickup_{$day}_end_time", true),
+                        'enabled' => (bool) get_term_meta($region->term_id, "field_pickup_{$day}_enabled", true),
+                        'start' => get_term_meta($region->term_id, "field_pickup_{$day}_start", true),
+                        'end' => get_term_meta($region->term_id, "field_pickup_{$day}_end", true),
                     );
                 }
-
-
             }
             // Cities (children of region)
             $cities = get_terms(array(

@@ -63,7 +63,7 @@ final class RK_Locations_Pickup_Days
 
         foreach ($days as $day_key => $day_label) {
             // Using 'term_' . $term_id as specified in the snippet
-            $enabled = function_exists('get_field') ? get_field('region_pickup_' . $day_key . '_enabled', 'term_' . $term_id) : false;
+            $enabled = function_exists('get_field') ? get_field('field_pickup_' . $day_key . '_enabled', 'term_' . $term_id) : false;
 
             if ($enabled) {
                 $output .= '
