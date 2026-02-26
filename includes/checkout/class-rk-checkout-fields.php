@@ -183,9 +183,9 @@ class RK_Checkout_Fields
                 $days = array('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
                 foreach ($days as $day) {
                     $regionData['pickup'][$day] = array(
-                        'enabled' => (bool) get_field("field_pickup_{$day}_enabled", 'term_' . $region->term_id),
-                        'start' => get_field("field_pickup_{$day}_start", 'term_' . $region->term_id),
-                        'end' => get_field("field_pickup_{$day}_end", 'term_' . $region->term_id),
+                        'enabled' => (bool) get_field("region_pickup_{$day}_enabled", 'term_' . $region->term_id),
+                        'start' => get_field("region_pickup_{$day}_start", 'term_' . $region->term_id),
+                        'end' => get_field("region_pickup_{$day}_end", 'term_' . $region->term_id),
                     );
                 }
             } else {
@@ -197,9 +197,9 @@ class RK_Checkout_Fields
                 $days = array('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
                 foreach ($days as $day) {
                     $regionData['pickup'][$day] = array(
-                        'enabled' => (bool) get_term_meta($region->term_id, "field_pickup_{$day}_enabled", true),
-                        'start' => get_term_meta($region->term_id, "field_pickup_{$day}_start", true),
-                        'end' => get_term_meta($region->term_id, "field_pickup_{$day}_end", true),
+                        'enabled' => (bool) get_term_meta($region->term_id, "region_pickup_{$day}_enabled", true),
+                        'start' => get_term_meta($region->term_id, "region_pickup_{$day}_start", true),
+                        'end' => get_term_meta($region->term_id, "region_pickup_{$day}_end", true),
                     );
                 }
             }
@@ -266,7 +266,7 @@ class RK_Checkout_Fields
 
         add_settings_field('region_label', __('Region field label', 'rk-helper'), array($this, 'field_region_label'), 'rk-checkout-fields', 'rk_cf_labels');
         add_settings_field('city_search_label', __('City search field label', 'rk-helper'), array($this, 'field_city_search_label'), 'rk-checkout-fields', 'rk_cf_labels');
-        add_settings_field('pickup_date_label', __('Pickup date field label', 'rk-helper'), array($this, 'field_pickup_date_label'), 'rk-checkout-fields', 'rk_cf_labels');
+        add_settings_field('pickup_date_label', __('Pickup date field label', 'rk-helper'), array($this, 'region_pickup_date_label'), 'rk-checkout-fields', 'rk_cf_labels');
         add_settings_field('city_search_placeholder', __('City search placeholder', 'rk-helper'), array($this, 'field_city_search_placeholder'), 'rk-checkout-fields', 'rk_cf_labels');
     }
 
@@ -466,7 +466,7 @@ class RK_Checkout_Fields
         echo '<p class="description">' . esc_html__('Label for the city search field on checkout.', 'rk-helper') . '</p>';
     }
 
-    public function field_pickup_date_label()
+    public function region_pickup_date_label()
     {
         $opts = $this->get_plugin_options();
         echo '<input type="text" name="rk_cf_options[pickup_date_label]" value="' . esc_attr($opts['pickup_date_label']) . '" class="regular-text" />';
