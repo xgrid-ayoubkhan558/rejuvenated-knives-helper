@@ -178,7 +178,6 @@ class RK_Checkout_Fields
             // Try to read ACF fields if available, fallback to term meta
             if (function_exists('get_field')) {
                 $regionData['region_id'] = get_field('region_id', 'term_' . $region->term_id) ?: $region->term_id;
-                $regionData['region_delivery_days'] = get_field('region_delivery_days', 'term_' . $region->term_id) ?: array();
 
                 $days = array('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
                 foreach ($days as $day) {
@@ -191,7 +190,6 @@ class RK_Checkout_Fields
             } else {
                 // fallback: read term meta fields
                 $regionData['region_id'] = get_term_meta($region->term_id, 'region_id', true) ?: $region->term_id;
-                $regionData['region_delivery_days'] = get_term_meta($region->term_id, 'region_delivery_days', true) ?: array();
 
                 $days = array('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
                 foreach ($days as $day) {
