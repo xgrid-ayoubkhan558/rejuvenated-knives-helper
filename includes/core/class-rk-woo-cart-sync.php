@@ -23,7 +23,7 @@ final class RK_Woo_Cart_Sync
 
         wp_enqueue_script(
             'rk-cart-sync',
-            plugin_dir_url(dirname(__FILE__) . '/../../') . 'assets/js/rk-cart-sync.js',
+            plugins_url('assets/js/rk-cart-sync.js', RK_HELPER_FILE),
             array(),
             '1.0.0',
             true

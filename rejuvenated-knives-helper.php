@@ -12,6 +12,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Define plugin file constant for reliable asset enqueuing
+define('RK_HELPER_FILE', __FILE__);
+
 function rk_helper_init()
 {
     // Define base path

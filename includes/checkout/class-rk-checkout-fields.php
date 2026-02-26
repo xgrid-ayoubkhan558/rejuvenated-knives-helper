@@ -124,8 +124,8 @@ class RK_Checkout_Fields
         wp_enqueue_script('rk-flatpickr', 'https://cdn.jsdelivr.net/npm/flatpickr', array(), null, true);
 
         // Our checkout CSS & script
-        wp_enqueue_style('rk-checkout-css', plugin_dir_url(__FILE__) . '../assets/css/rk-checkout.css', array(), filemtime(plugin_dir_path(__FILE__) . '../assets/css/rk-checkout.css'));
-        wp_enqueue_script('rk-checkout', plugin_dir_url(__FILE__) . '../assets/js/rk-checkout.js', array('rk-flatpickr', 'jquery'), filemtime(plugin_dir_path(__FILE__) . '../assets/js/rk-checkout.js'), true);
+        wp_enqueue_style('rk-checkout-css', plugins_url('assets/css/rk-checkout.css', RK_HELPER_FILE), array(), filemtime(plugin_dir_path(RK_HELPER_FILE) . 'assets/css/rk-checkout.css'));
+        wp_enqueue_script('rk-checkout', plugins_url('assets/js/rk-checkout.js', RK_HELPER_FILE), array('rk-flatpickr', 'jquery'), filemtime(plugin_dir_path(RK_HELPER_FILE) . 'assets/js/rk-checkout.js'), true);
 
         // Localize data for frontend
         $data = $this->get_locations_data();

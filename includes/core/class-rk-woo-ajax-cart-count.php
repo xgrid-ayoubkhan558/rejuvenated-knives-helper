@@ -21,7 +21,7 @@ final class RK_Woo_Ajax_Cart_Count_Logic
 
         wp_enqueue_script(
             'rk-woo-ajax-cart-count',
-            plugin_dir_url(dirname(__FILE__) . '/../../') . 'assets/js/rk-woo-ajax-cart-count.js',
+            plugins_url('assets/js/rk-woo-ajax-cart-count.js', RK_HELPER_FILE),
             array(),
             '1.0.0',
             true
