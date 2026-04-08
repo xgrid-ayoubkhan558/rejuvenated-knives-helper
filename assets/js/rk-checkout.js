@@ -115,9 +115,9 @@
         today.setHours(0, 0, 0, 0);
 
         return flatpickr(input, {
-            dateFormat: "m-d-Y",
+            dateFormat: config.dateFormat,
             allowInput: false,
-            minDate: new Date(today.getTime() + config.minDaysAdvance * 86400000),
+            minDate: new Date(today.getTime() + Math.max(config.minDaysAdvance, 1) * 86400000),
             maxDate: config.maxDaysAdvance
                 ? new Date(today.getTime() + config.maxDaysAdvance * 86400000)
                 : null,
