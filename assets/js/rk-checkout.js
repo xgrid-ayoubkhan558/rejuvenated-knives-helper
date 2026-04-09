@@ -75,26 +75,49 @@
         }
     }
 
-    function initDatePicker(input, region) {
+    function initDatePicker(input, cityOrRegion, isCity = false) {
         if (!input || typeof flatpickr === 'undefined') return null;
 
+        const pickupLogic = (window.rk_check_fields_options || {}).pickup_logic || 'region';
+        console.log('[RK Debug] Initializing date picker. Logic:', pickupLogic, 'Is City Data:', isCity);
+
+        // Determine which pickup data to use
+        let pickupData = cityOrRegion.pickup;
+
+        // If we are passed a city, we might still want region data if logic is 'region'
+        if (isCity) {
+            if (pickupLogic === 'region') {
+                console.log('[RK Debug] Logic is region, using region pickup data');
+                pickupData = cityOrRegion.region.pickup;
+            } else {
+                console.log('[RK Debug] Logic is city, using city pickup data');
+                pickupData = cityOrRegion.pickup;
+            }
+        }
+
+        console.log('[RK Debug] Pickup data being used:', pickupData);
+
         const enabledDays = [];
-        if (region.pickup) {
-            Object.values(region.pickup).forEach((day, i) => {
-                if (day?.enabled) enabledDays.push(i);
+        if (pickupData) {
+            const dayMap = { 'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4, 'friday': 5, 'saturday': 6 };
+            Object.keys(pickupData).forEach(dayKey => {
+                const dayData = pickupData[dayKey];
+                const dayIndex = dayMap[dayKey.toLowerCase()];
+                if (dayData?.enabled && typeof dayIndex !== 'undefined') {
+                    enabledDays.push(dayIndex);
+                }
             });
         }
+
+        console.log('[RK Debug] Computed enabled days (0-6):', enabledDays);
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        console.log('[RK Debug] Initializing Flatpickr with dateFormat:', config.dateFormat);
-
         return flatpickr(input, {
-            // dateFormat: config.dateFormat,
-            dateFormat: "m-d-Y",
+            dateFormat: config.dateFormat,
             allowInput: false,
-            minDate: new Date(today.getTime() + config.minDaysAdvance * 86400000),
+            minDate: new Date(today.getTime() + Math.max(config.minDaysAdvance, 1) * 86400000),
             maxDate: config.maxDaysAdvance
                 ? new Date(today.getTime() + config.maxDaysAdvance * 86400000)
                 : null,
@@ -132,12 +155,12 @@
         function selectCity(city, updateSearchInput = true) {
             if (!city) return;
 
+            console.log('[RK Debug] City matched and selected:', city.city_name, 'Region:', city.region.region_name);
+
             if (updateSearchInput) {
                 searchInput.value = `${city.city_name} `;
             }
             cityInput.value = city.city_name;
-            // REMOVED: Auto-population of region field
-            // if (regionInput) regionInput.value = city.region.region_name;
 
             trigger(cityInput, 'change');
             dropdown.style.display = 'none';
@@ -153,7 +176,7 @@
 
             if (dateInput) {
                 if (datePicker) datePicker.destroy();
-                datePicker = initDatePicker(dateInput, city.region);
+                datePicker = initDatePicker(dateInput, city, true);
                 if (dateRow) dateRow.style.display = '';
             }
         }
